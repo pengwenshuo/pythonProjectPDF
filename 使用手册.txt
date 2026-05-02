@@ -1,0 +1,309 @@
+============================================================
+  图片 / Word / Excel 转 PDF 与 PDF 合并工具 — 使用手册
+============================================================
+
+【目录】
+  1.  简介
+  2.  环境要求与安装
+  3.  两种启动方式
+  4.  工作模式详解
+  5.  命令行参数速查
+  6.  使用示例
+  7.  Python API 调用（供开发者）
+  8.  常见问题 FAQ
+  9.  目录结构
+
+============================================================
+1. 简介
+============================================================
+
+本工具是一个命令行 PDF 转换/合并脚本，支持以下功能：
+
+  - 图片（jpg / png / webp / bmp / gif / tiff）批量转 PDF
+  - Word 文档（.docx / .doc）转 PDF
+  - Excel 表格（.xlsx / .xls / .xlsm）转 PDF
+  - 合并多个 PDF 文件为单一文件
+
+Word / Excel 转换通过 COM 接口直接调用本机已安装的 Microsoft Office，
+输出效果与在 Office 中"另存为 PDF"完全一致，不会出现排版错位。
+
+
+============================================================
+2. 环境要求与安装
+============================================================
+
+必需（所有模式都需要）：
+  Python 3.8+
+  pip install pillow
+
+图片模式额外需要：无（pillow 已包含）
+
+Word / Excel 模式额外需要：
+  已安装 Microsoft Office（Word / Excel）
+  pip install pywin32
+
+合并模式额外需要：
+  pip install pypdf
+
+
+============================================================
+3. 三种启动方式
+============================================================
+
+快捷方式（推荐，任意终端直接输入）：
+  runPDF [参数]
+  或桌面上的 run [参数]
+
+  无需 cd 到项目目录，打开终端就能用。
+  前提：项目目录已加入系统 PATH 环境变量。
+
+旧习惯入口（单文件，兼容之前的使用习惯）：
+  python PDFgj.py [参数]
+
+新习惯入口（包方式运行，更规范）：
+  python -m pdfgj [参数]
+
+三种方式效果完全一致，任选其一。
+
+
+============================================================
+4. 工作模式详解
+============================================================
+
+4.1 图片转 PDF（默认模式）
+-------------------------------------------
+当不指定任何模式参数时，自动进入图片模式。
+将当前目录下所有图片文件逐一转为同名 PDF。
+
+支持格式：.jpg / .jpeg / .png / .webp / .bmp / .gif / .tiff / .tif
+
+特殊处理：
+  - 透明背景（RGBA）自动替换为白底
+  - 调色板模式（P 模式）自动转换为真彩色
+  - 灰度模式（-g）可将彩色图片转为黑白 PDF
+
+输出：每张图片生成一个同名 .pdf 文件
+
+4.2 Word 转 PDF（-w）
+-------------------------------------------
+将当前目录下所有 Word 文档转为同名 PDF。
+
+支持格式：.docx / .doc
+
+特性：
+  - 批量模式下只启动一次 Word，所有文档共用同一实例，大幅提速
+  - 自动禁用宏、弹窗提示、链接更新
+  - 只读打开，不会修改原文档
+  - 遇到 COM 错误时给出具体原因（密码保护/文件锁定/格式不兼容等）
+
+输出：每个 Word 文档生成一个同名 .pdf 文件
+
+4.3 Excel 转 PDF（-e）
+-------------------------------------------
+将当前目录下所有 Excel 表格转为同名 PDF。
+
+支持格式：.xlsx / .xls / .xlsm
+
+特性：
+  - 批量模式下只启动一次 Excel
+  - 自动禁用弹窗、屏幕刷新、外部链接更新
+  - 公式自动重算（无需手动刷新）
+  - 只读打开，不会修改原文件
+
+输出：每个 Excel 表格生成一个同名 .pdf 文件
+
+4.4 PDF 合并（-m）
+-------------------------------------------
+将当前目录下所有 PDF 文件合并为单一 PDF 文件。
+
+特性：
+  - 流式合并，逐文件读取写入，不会一次性加载全部文件到内存
+  - 支持三种排序方式：文件名自然排序、创建时间、修改时间
+  - 自动排除输出文件自身（不会把自己合进去）
+
+输出：1 个合并后的 PDF 文件（默认文件名 merged.pdf）
+
+
+============================================================
+5. 命令行参数速查
+============================================================
+
+模式参数（互斥，只能选一个）：
+  （无）              默认：图片转 PDF
+  -m,  --merge        合并模式：合并目录下所有 PDF
+  -g,  --gray         灰度模式：图片转灰度 PDF
+  -w,  --word         Word 模式：Word 文档转 PDF
+  -e,  --excel        Excel 模式：Excel 表格转 PDF
+
+通用参数：
+  -r,  --recursive    递归查找子目录（所有模式都可用）
+  -y,  --yes          跳过所有覆盖确认（适合批量自动化/无人值守）
+  --kill-office       允许强制终止 Office 进程
+                      （当进程无法正常退出时使用，可能丢失其他文档的未保存内容）
+
+合并模式专属参数：
+  -o,  --output       指定输出文件名（默认 merged.pdf）
+  --sortby            排序依据：name / ctime / mtime（默认 name）
+
+
+============================================================
+6. 使用示例
+============================================================
+
+--- 快捷方式（推荐） ---
+  runPDF                                       图片→PDF，当前目录，彩色
+  runPDF -gr                                   图片→PDF，含子目录，灰度
+  runPDF -w                                    Word→PDF，当前目录
+  runPDF -wr                                   Word→PDF，含子目录
+  runPDF -e                                    Excel→PDF，当前目录
+  runPDF -er                                   Excel→PDF，含子目录
+  runPDF -m                                    合并当前目录 PDF → merged.pdf
+  runPDF -mro 合集.pdf                          合并+递归+指定输出文件名
+  runPDF -y -w                                 自动覆盖，无人值守
+
+--- 旧入口 ---
+  python PDFgj.py                              图片→PDF，当前目录，彩色
+  python PDFgj.py -r                           图片→PDF，含子目录，彩色
+  python PDFgj.py -gr                          图片→PDF，含子目录，灰度
+  python PDFgj.py -g -r -y                     灰度+递归+自动覆盖（无人值守）
+
+--- Word 转 PDF ---
+  python PDFgj.py -w                           Word→PDF，当前目录
+  python PDFgj.py -wr                          Word→PDF，含子目录
+  python PDFgj.py -w -r -y                     Word→PDF，递归+自动覆盖
+
+--- Excel 转 PDF ---
+  python PDFgj.py -e                           Excel→PDF，当前目录
+  python PDFgj.py -er                          Excel→PDF，含子目录
+
+--- PDF 合并 ---
+  python PDFgj.py -m                           合并当前目录 PDF → merged.pdf
+  python PDFgj.py -mro 合并结果.pdf             合并+递归+指定输出文件名
+  python PDFgj.py -m --sortby mtime            合并，按修改时间排序
+
+--- 新入口（等价写法） ---
+  python -m pdfgj -w                           Word→PDF
+  python -m pdfgj -mro 输出.pdf                 合并+递归+指定输出
+
+
+============================================================
+7. Python API 调用（供开发者）
+============================================================
+
+可以在你自己的 Python 脚本中导入本工具的核心功能：
+
+7.1 批量转换 Word（推荐）
+-------------------------------------------
+from pdfgj import WordConverter
+
+with WordConverter() as wc:
+    wc.convert('报告.docx')
+    wc.convert('合同.docx')
+    wc.convert('方案.docx')
+# 退出 with 块自动关闭 Word，无需手动清理
+
+7.2 批量转换 Excel
+-------------------------------------------
+from pdfgj import ExcelConverter
+
+with ExcelConverter() as ec:
+    ec.convert('财务.xlsx')
+    ec.convert('报表.xlsx')
+
+7.3 单文件 Word 转换（快捷版）
+-------------------------------------------
+from pdfgj import word_to_pdf
+
+word_to_pdf('文档.docx')  # 启停一次 Word，用完即关
+
+7.4 单文件 Excel 转换（快捷版）
+-------------------------------------------
+from pdfgj import excel_to_pdf
+
+excel_to_pdf('表格.xlsx')
+
+7.5 单张图片转 PDF
+-------------------------------------------
+from pdfgj import image_to_pdf
+
+image_to_pdf('照片.jpg')
+image_to_pdf('照片.jpg', grayscale=True)  # 灰度
+
+7.6 合并 PDF
+-------------------------------------------
+from pdfgj import merge_pdfs
+from pathlib import Path
+
+merge_pdfs(Path('.'), output_name='合集.pdf', recursive=True, sortby='mtime')
+
+7.7 获取支持的格式常量
+-------------------------------------------
+from pdfgj import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS
+
+print(IMG_FORMATS)   # {'.jpg', '.jpeg', '.png', ...}
+print(WORD_FORMATS)  # {'.docx', '.doc'}
+print(EXCEL_FORMATS) # {'.xlsx', '.xls', '.xlsm'}
+
+
+============================================================
+8. 常见问题 FAQ
+============================================================
+
+Q: 运行时提示"缺少 pywin32 库"？
+A: Word / Excel 转换需要此库，运行：pip install pywin32
+   如果只需要图片转 PDF 或合并 PDF，不需要安装。
+
+Q: 提示"缺少 pypdf 库"？
+A: PDF 合并需要此库，运行：pip install pypdf
+
+Q: 转换 Word 时报"COM 服务器忙"？
+A: 关闭所有 Word 文档再试。如仍有问题，打开任务管理器
+   结束 WINWORD.EXE 进程后重试。
+
+Q: 转换 Excel 时表格排版不对？
+A: 请在 Excel 中手动打开文件，调整页面布局（页边距、打印区域）后保存。
+   本工具的输出等同 Excel 打印预览的效果。
+
+Q: 不想每次确认覆盖已有文件？
+A: 加 -y 参数（--yes），自动跳过所有确认。
+
+Q: 合并后的 PDF 缺失某些文件或顺序不对？
+A: 默认按文件名自然排序（1, 2, 10 而非 1, 10, 2）。
+   如需按时间排序，使用 --sortby mtime 或 --sortby ctime。
+
+Q: Office 进程没有自动关闭？
+A: 工具会尝试正常 Quit → PID 精确终止 → 进程名终止（需 --kill-office）。
+   如果进程残留，手动在任务管理器中结束 WINWORD.EXE / EXCEL.EXE 即可。
+   --kill-office 参数会终止所有同名 Office 进程，使用前请保存其他文档。
+
+Q: 支持 .doc（旧格式）吗？
+A: 支持，.doc 和 .docx 均可。同样 .xls 和 .xlsx 均支持。
+
+Q: 可以在没有 Office 的服务器上运行吗？
+A: 图片转 PDF 和 PDF 合并可以。Word / Excel 转换必须有 Office。
+
+
+============================================================
+9. 目录结构
+============================================================
+
+项目根目录/
+    runPDF.bat               ← 快捷方式（任意终端可用）
+    PDFgj.py                 ← 旧习惯入口（单文件启动）
+    使用手册.txt              ← 本文件
+    pdfgj/                   ← 模块包（新习惯入口）
+        __init__.py          公开 API
+        __main__.py          python -m pdfgj 入口
+        constants.py         常量定义
+        deps.py              依赖检测
+        utils.py             工具函数
+        com_core.py          COM 公共层
+        image_convert.py     图片→PDF
+        word_convert.py      Word→PDF
+        excel_convert.py     Excel→PDF
+        merge.py             PDF 合并
+        cli.py               命令行参数解析
+
+============================================================
+                 版本：2026-05  |  作者：优化重构 by Claude code
+============================================================
