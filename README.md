@@ -30,19 +30,6 @@ pip install -e .
 
 ## 使用方式
 
-### 快捷命令（推荐，任意目录可用）
-
-将项目目录加入系统 PATH 后，直接在终端使用：
-
-```bash
-runPDF -w            # Word → PDF
-runPDF -e            # Excel → PDF
-runPDF -p            # PPT → PDF
-runPDF -m            # 合并 PDF
-runPDF -gr           # 图片→PDF（灰度+递归）
-runPDF -mro 合集.pdf # 合并+递归+指定输出
-```
-
 ### Python 模块调用
 
 ```bash
