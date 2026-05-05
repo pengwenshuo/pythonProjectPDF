@@ -17,6 +17,7 @@ from .deps import _has_win32
 _COM_PROCESS_NAMES: dict[str, str] = {
     'Word.Application': 'WINWORD.EXE',
     'Excel.Application': 'EXCEL.EXE',
+    'PowerPoint.Application': 'POWERPNT.EXE',
 }
 
 
@@ -144,6 +145,9 @@ def _classify_com_error(err: Exception) -> str:
         '0x80010105': 'COM 服务器忙或已崩溃，请重试',
         '0x800706ba': 'COM 服务无响应，可能 OLE 死锁',
         '0x80010001': 'RPC 调用被拒绝，Office 可能正在显示对话框',
+        '0x80020009': 'COM 属性设置失败，可能 Office 版本不兼容或文件状态异常',
+        '0x80080005': 'PowerPoint 服务器不可用（未安装或损坏）',
+        '0x80004001': '未实现（通常是文件格式不支持）',
     }
     for code, reason in hresult_map.items():
         if code.lower() in msg.lower():

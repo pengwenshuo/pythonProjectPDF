@@ -1,11 +1,11 @@
 ============================================================
-  图片 / Word / Excel 转 PDF 与 PDF 合并工具 — 使用手册
+  图片 / Word / Excel / PPT 转 PDF 与 PDF 合并工具 — 使用手册
 ============================================================
 
 【目录】
   1.  简介
   2.  环境要求与安装
-  3.  两种启动方式
+  3.  启动方式
   4.  工作模式详解
   5.  命令行参数速查
   6.  使用示例
@@ -22,9 +22,10 @@
   - 图片（jpg / png / webp / bmp / gif / tiff）批量转 PDF
   - Word 文档（.docx / .doc）转 PDF
   - Excel 表格（.xlsx / .xls / .xlsm）转 PDF
+  - PowerPoint 演示文稿（.pptx / .ppt）转 PDF，支持指定页码范围
   - 合并多个 PDF 文件为单一文件
 
-Word / Excel 转换通过 COM 接口直接调用本机已安装的 Microsoft Office，
+Word / Excel / PPT 转换通过 COM 接口直接调用本机已安装的 Microsoft Office，
 输出效果与在 Office 中"另存为 PDF"完全一致，不会出现排版错位。
 
 
@@ -32,38 +33,35 @@ Word / Excel 转换通过 COM 接口直接调用本机已安装的 Microsoft Off
 2. 环境要求与安装
 ============================================================
 
-必需（所有模式都需要）：
-  Python 3.8+
-  pip install pillow
+系统要求：
+  - Windows 7+
+  - Python 3.9+
+  - Word / Excel / PPT 转换需要安装对应的 Microsoft Office
 
-图片模式额外需要：无（pillow 已包含）
+安装方式（推荐）：
+  pip install -e .
 
-Word / Excel 模式额外需要：
-  已安装 Microsoft Office（Word / Excel）
-  pip install pywin32
+  安装后即可在任意目录使用 pdfgj 命令。
 
-合并模式额外需要：
-  pip install pypdf
+备选安装（仅装依赖，不注册命令）：
+  pip install -r requirements.txt
 
 
 ============================================================
-3. 三种启动方式
+3. 启动方式
 ============================================================
 
-快捷方式（推荐，任意终端直接输入）：
+快捷命令（推荐，任意目录可用）：
   runPDF [参数]
-  或桌面上的 run [参数]
 
-  无需 cd 到项目目录，打开终端就能用。
   前提：项目目录已加入系统 PATH 环境变量。
 
-旧习惯入口（单文件，兼容之前的使用习惯）：
-  python PDFgj.py [参数]
-
-新习惯入口（包方式运行，更规范）：
+模块入口（等价写法）：
   python -m pdfgj [参数]
 
-三种方式效果完全一致，任选其一。
+安装为命令（可选）：
+  pip install -e .
+  pdfgj [参数]          # 需先激活虚拟环境
 
 
 ============================================================
@@ -112,7 +110,21 @@ Word / Excel 模式额外需要：
 
 输出：每个 Excel 表格生成一个同名 .pdf 文件
 
-4.4 PDF 合并（-m）
+4.4 PPT 转 PDF（-p）
+-------------------------------------------
+将当前目录下所有 PowerPoint 演示文稿转为同名 PDF。
+
+支持格式：.pptx / .ppt
+
+特性：
+  - 批量模式下只启动一次 PowerPoint
+  - 自动禁用弹窗、宏
+  - 只读打开，不会修改原文件
+  - 支持指定页码范围导出（--slides 1,3,5-8）
+
+输出：每个演示文稿生成一个同名 .pdf 文件
+
+4.5 PDF 合并（-m）
 -------------------------------------------
 将当前目录下所有 PDF 文件合并为单一 PDF 文件。
 
@@ -134,12 +146,16 @@ Word / Excel 模式额外需要：
   -g,  --gray         灰度模式：图片转灰度 PDF
   -w,  --word         Word 模式：Word 文档转 PDF
   -e,  --excel        Excel 模式：Excel 表格转 PDF
+  -p,  --ppt          PPT 模式：PowerPoint 演示文稿转 PDF
 
 通用参数：
   -r,  --recursive    递归查找子目录（所有模式都可用）
   -y,  --yes          跳过所有覆盖确认（适合批量自动化/无人值守）
   --kill-office       允许强制终止 Office 进程
                       （当进程无法正常退出时使用，可能丢失其他文档的未保存内容）
+
+PPT 模式专属参数：
+  --slides            指定导出页码，如 "1,3,5-8"
 
 合并模式专属参数：
   -o,  --output       指定输出文件名（默认 merged.pdf）
@@ -150,39 +166,25 @@ Word / Excel 模式额外需要：
 6. 使用示例
 ============================================================
 
---- 快捷方式（推荐） ---
+--- 快捷命令（推荐） ---
   runPDF                                       图片→PDF，当前目录，彩色
   runPDF -gr                                   图片→PDF，含子目录，灰度
   runPDF -w                                    Word→PDF，当前目录
   runPDF -wr                                   Word→PDF，含子目录
   runPDF -e                                    Excel→PDF，当前目录
   runPDF -er                                   Excel→PDF，含子目录
+  runPDF -p                                    PPT→PDF，当前目录
+  runPDF -pr                                   PPT→PDF，含子目录
+  runPDF -p --slides 1,3,5-8                   PPT→PDF，指定页码
+  runPDF -pr --slides 1,3,5-8                  PPT→PDF，含子目录+指定页码
   runPDF -m                                    合并当前目录 PDF → merged.pdf
   runPDF -mro 合集.pdf                          合并+递归+指定输出文件名
   runPDF -y -w                                 自动覆盖，无人值守
+  runPDF -m --sortby mtime                     合并，按修改时间排序
 
---- 旧入口 ---
-  python PDFgj.py                              图片→PDF，当前目录，彩色
-  python PDFgj.py -r                           图片→PDF，含子目录，彩色
-  python PDFgj.py -gr                          图片→PDF，含子目录，灰度
-  python PDFgj.py -g -r -y                     灰度+递归+自动覆盖（无人值守）
-
---- Word 转 PDF ---
-  python PDFgj.py -w                           Word→PDF，当前目录
-  python PDFgj.py -wr                          Word→PDF，含子目录
-  python PDFgj.py -w -r -y                     Word→PDF，递归+自动覆盖
-
---- Excel 转 PDF ---
-  python PDFgj.py -e                           Excel→PDF，当前目录
-  python PDFgj.py -er                          Excel→PDF，含子目录
-
---- PDF 合并 ---
-  python PDFgj.py -m                           合并当前目录 PDF → merged.pdf
-  python PDFgj.py -mro 合并结果.pdf             合并+递归+指定输出文件名
-  python PDFgj.py -m --sortby mtime            合并，按修改时间排序
-
---- 新入口（等价写法） ---
+--- 模块入口（等价写法） ---
   python -m pdfgj -w                           Word→PDF
+  python -m pdfgj -p --slides 1,3,5-8          PPT→PDF，指定页码
   python -m pdfgj -mro 输出.pdf                 合并+递归+指定输出
 
 
@@ -210,39 +212,60 @@ with ExcelConverter() as ec:
     ec.convert('财务.xlsx')
     ec.convert('报表.xlsx')
 
-7.3 单文件 Word 转换（快捷版）
+7.3 批量转换 PPT
+-------------------------------------------
+from pdfgj import PptConverter
+
+# 全量导出
+with PptConverter() as pc:
+    pc.convert('演示.pptx')
+    pc.convert('汇报.pptx')
+
+# 指定页码范围
+with PptConverter(slides="1,3,5-8") as pc:
+    pc.convert('演示.pptx')
+
+7.4 单文件 Word 转换（快捷版）
 -------------------------------------------
 from pdfgj import word_to_pdf
 
 word_to_pdf('文档.docx')  # 启停一次 Word，用完即关
 
-7.4 单文件 Excel 转换（快捷版）
+7.5 单文件 Excel 转换（快捷版）
 -------------------------------------------
 from pdfgj import excel_to_pdf
 
 excel_to_pdf('表格.xlsx')
 
-7.5 单张图片转 PDF
+7.6 单文件 PPT 转换（快捷版）
+-------------------------------------------
+from pdfgj import ppt_to_pdf
+
+ppt_to_pdf('演示.pptx')                    # 全量导出
+ppt_to_pdf('演示.pptx', slides="1,3,5-8")  # 指定页码
+
+7.7 单张图片转 PDF
 -------------------------------------------
 from pdfgj import image_to_pdf
 
 image_to_pdf('照片.jpg')
 image_to_pdf('照片.jpg', grayscale=True)  # 灰度
 
-7.6 合并 PDF
+7.8 合并 PDF
 -------------------------------------------
 from pdfgj import merge_pdfs
 from pathlib import Path
 
 merge_pdfs(Path('.'), output_name='合集.pdf', recursive=True, sortby='mtime')
 
-7.7 获取支持的格式常量
+7.9 获取支持的格式常量
 -------------------------------------------
-from pdfgj import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS
+from pdfgj import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS, PPT_FORMATS
 
 print(IMG_FORMATS)   # {'.jpg', '.jpeg', '.png', ...}
 print(WORD_FORMATS)  # {'.docx', '.doc'}
 print(EXCEL_FORMATS) # {'.xlsx', '.xls', '.xlsm'}
+print(PPT_FORMATS)   # {'.pptx', '.ppt'}
 
 
 ============================================================
@@ -250,7 +273,7 @@ print(EXCEL_FORMATS) # {'.xlsx', '.xls', '.xlsm'}
 ============================================================
 
 Q: 运行时提示"缺少 pywin32 库"？
-A: Word / Excel 转换需要此库，运行：pip install pywin32
+A: Word / Excel / PPT 转换需要此库，运行：pip install pywin32
    如果只需要图片转 PDF 或合并 PDF，不需要安装。
 
 Q: 提示"缺少 pypdf 库"？
@@ -280,7 +303,12 @@ Q: 支持 .doc（旧格式）吗？
 A: 支持，.doc 和 .docx 均可。同样 .xls 和 .xlsx 均支持。
 
 Q: 可以在没有 Office 的服务器上运行吗？
-A: 图片转 PDF 和 PDF 合并可以。Word / Excel 转换必须有 Office。
+A: 图片转 PDF 和 PDF 合并可以。Word / Excel / PPT 转换必须有 Office。
+
+Q: PPT 转换时如何指定导出哪些页？
+A: 使用 --slides 参数，支持单页和范围组合：
+   pdfgj -p --slides 1,3,5-8    导出第 1、3、5、6、7、8 页
+   pdfgj -pr --slides 1-5       递归处理，每个文件只导出前 5 页
 
 
 ============================================================
@@ -288,22 +316,23 @@ A: 图片转 PDF 和 PDF 合并可以。Word / Excel 转换必须有 Office。
 ============================================================
 
 项目根目录/
-    runPDF.bat               ← 快捷方式（任意终端可用）
-    PDFgj.py                 ← 旧习惯入口（单文件启动）
-    使用手册.txt              ← 本文件
-    pdfgj/                   ← 模块包（新习惯入口）
-        __init__.py          公开 API
-        __main__.py          python -m pdfgj 入口
-        constants.py         常量定义
-        deps.py              依赖检测
-        utils.py             工具函数
-        com_core.py          COM 公共层
-        image_convert.py     图片→PDF
-        word_convert.py      Word→PDF
-        excel_convert.py     Excel→PDF
-        merge.py             PDF 合并
-        cli.py               命令行参数解析
+    pyproject.toml             ← 打包配置与依赖声明
+    runPDF.bat                 ← 快捷运行脚本（加入 PATH 后任意目录可用）
+    使用手册.txt               ← 本文件
+    pdfgj/                     ← 核心模块包
+        __init__.py            公开 API
+        __main__.py            python -m pdfgj 入口
+        constants.py           常量定义
+        deps.py                依赖检测
+        utils.py               工具函数
+        com_core.py            COM 公共层
+        image_convert.py       图片→PDF
+        word_convert.py        Word→PDF
+        excel_convert.py       Excel→PDF
+        ppt_convert.py         PPT→PDF
+        merge.py               PDF 合并
+        cli.py                 命令行参数解析
 
 ============================================================
-                 版本：2026-05  |  作者：优化重构 by Claude code
+                 版本：2026-05-05  |  作者：优化重构 by Claude code
 ============================================================

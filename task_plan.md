@@ -1,68 +1,46 @@
-# 任务计划：PDFgj.py 模块化重构（第三轮）
+# 任务计划：PPT 转 PDF 功能
 
 ## 目标
-按照 `docs/superpowers/specs/2026-05-01-pdfgj-refactor-design.md` 设计规范，将 781 行 `PDFgj.py` 拆分为 `pdfgj/` 包（11 模块 + 根入口）。
+按照 `docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md` 设计规范，为 PDFgj 添加 PowerPoint 演示文稿转 PDF 功能。
 
 ## 当前阶段
 全部完成
 
 ## 各阶段
 
-### 阶段 1：创建包骨架
-- [x] 创建 `pdfgj/` 目录
-- [x] 创建 `constants.py`（零依赖，格式常量 + COM 常量）
-- [x] 创建 `deps.py`（pypdf/Win32COM 依赖检测）
+### 阶段 1：常量与进程映射
+- [x] `constants.py` 添加 `PPT_FORMATS`、`PP_SAVE_AS_PDF`、`PP_PRINT_RANGE_ALL`、`PP_PRINT_RANGE_SLIDES`
+- [x] `com_core.py` 添加 `PowerPoint.Application → POWERPNT.EXE` 映射
+- [x] `com_core.py` 的 `_classify_com_error()` 添加 PPT 特有 HRESULT
 - **状态：** complete
 
-### 阶段 2：工具层
-- [x] 创建 `utils.py`（排序、文件获取、进度条、覆盖保护、全局标志 + setter）
+### 阶段 2：页码范围解析
+- [x] `utils.py` 添加 `parse_slide_range()` 函数
 - **状态：** complete
 
-### 阶段 3：COM 公共层
-- [x] 创建 `com_core.py`（PID 获取、进程退出、错误分类、预检、批量转换，win32com 惰性导入）
+### 阶段 3：PPT 转换器
+- [x] 新建 `ppt_convert.py`（_setup_ppt、_convert_ppt、_export_slides、ppt_to_pdf、PptConverter）
 - **状态：** complete
 
-### 阶段 4：业务层（转换器）
-- [x] 创建 `image_convert.py`
-- [x] 创建 `word_convert.py`
-- [x] 创建 `excel_convert.py`
-- [x] 创建 `merge.py`
+### 阶段 4：CLI 集成
+- [x] `cli.py` 添加 `-p/--ppt` 互斥参数
+- [x] `cli.py` 添加 `--slides` 参数 + 校验逻辑
+- [x] `cli.py` 添加 PPT 主流程分支
+- [x] `cli.py` 更新帮助文本
 - **状态：** complete
 
-### 阶段 5：CLI 层 + 入口
-- [x] 创建 `cli.py`（参数解析 + main）
-- [x] 创建 `__init__.py`（公开 API 重新导出）
-- [x] 创建 `__main__.py`
-- [x] 重写 `PDFgj.py` 为薄入口
-- **状态：** complete
-
-### 阶段 6：验证与清理
-- [x] 语法检查所有 12 模块 → 全部通过
-- [x] `python PDFgj.py -h` 可用性测试 → 通过
-- [x] `python -m pdfgj -h` 可用性测试 → 通过
+### 阶段 5：验证
+- [x] 语法检查所有模块（13/13 通过）
+- [x] `python -m pdfgj -h` 验证帮助文本
+- [x] `python -m pdfgj --slides 1,3,5-8` 验证参数校验
 - **状态：** complete
 
 ## 关键决策
 | 决策 | 理由 |
 |------|------|
-| 自下而上创建 | 每次只引入已验证的下层模块 |
-| 包内用相对 import | 可移植，避免绝对路径问题 |
-| com_core 惰性 import win32com | 无 Office 用户处理图片不报错 |
-| 全局标志放 utils.py + `from . import utils` 引用 | 避免模块级别直接 import 导致值快照问题 |
+| 复用现有 COM 转换器模式 | 3 个转换器重复代码量可控，不需抽取基类 |
+| --slides 参数与 -p 绑定 | 与 --output 仅在 -m 下有效的校验逻辑一致 |
+| PptConverter 构造函数接收 slides | 批量转换时所有文件共享同一页码范围 |
 
-## 模块统计
-
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| constants.py | 20 | 格式常量 + COM 常量 |
-| deps.py | 37 | pypdf 三层回退 + Win32COM 检测 |
-| utils.py | 73 | 排序、文件获取、进度条、覆盖保护、全局标志 |
-| com_core.py | 160 | PID 获取、进程退出、错误分类、预检、批量转换 |
-| image_convert.py | 27 | 图片转 PDF |
-| word_convert.py | 85 | Word 配置、转换、单文件模式、上下文管理器 |
-| excel_convert.py | 86 | Excel 配置、转换、单文件模式、上下文管理器 |
-| merge.py | 72 | PDF 合并 |
-| cli.py | 101 | 参数解析 + 主流程 |
-| __init__.py | 10 | 公开 API 导出 |
-| __main__.py | 3 | python -m pdfgj 入口 |
-| PDFgj.py | 6 | 根入口（兼容旧习惯） |
+## 设计文档
+`docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md`

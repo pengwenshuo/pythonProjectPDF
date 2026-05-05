@@ -27,6 +27,63 @@ def _get_files(directory: Path, formats: set[str], recursive: bool = False) -> l
 
 
 # ============================================================
+# 页码范围解析
+# ============================================================
+def parse_slide_range(spec: str, total_slides: int) -> list[int]:
+    """解析页码范围字符串，返回去重排序后的页码列表。
+
+    格式: "1,3,5-8,10"
+    规则:
+      - 页码从 1 开始
+      - 支持单页 (3) 和范围 (5-8)
+      - 超出 total_slides 的页码会被裁剪并警告
+      - 空字符串或无效格式抛出 ValueError
+    """
+    if not spec or not spec.strip():
+        raise ValueError("页码范围不能为空")
+
+    pages: set[int] = set()
+    for part in spec.split(','):
+        part = part.strip()
+        if not part:
+            continue
+        if '-' in part:
+            # 范围格式：5-8
+            nums = part.split('-', 1)
+            if len(nums) != 2 or not nums[0].strip() or not nums[1].strip():
+                raise ValueError(f"无效的页码范围格式: '{part}'")
+            try:
+                start = int(nums[0].strip())
+                end = int(nums[1].strip())
+            except ValueError:
+                raise ValueError(f"页码必须是数字: '{part}'")
+            if start < 1 or end < 1:
+                raise ValueError(f"页码必须从 1 开始: '{part}'")
+            if start > end:
+                raise ValueError(f"起始页不能大于结束页: '{part}'")
+            pages.update(range(start, end + 1))
+        else:
+            # 单页格式：3
+            try:
+                num = int(part)
+            except ValueError:
+                raise ValueError(f"页码必须是数字: '{part}'")
+            if num < 1:
+                raise ValueError(f"页码必须从 1 开始: '{part}'")
+            pages.add(num)
+
+    # 裁剪超出范围的页码
+    valid_pages = sorted(p for p in pages if p <= total_slides)
+    overflow = sorted(p for p in pages if p > total_slides)
+    if overflow:
+        print(f"  [警告] 页码超出范围（共 {total_slides} 页），已忽略: {', '.join(map(str, overflow))}")
+    if not valid_pages:
+        raise ValueError(f"所有指定页码均超出范围（共 {total_slides} 页）")
+
+    return valid_pages
+
+
+# ============================================================
 # 进度条
 # ============================================================
 def _progress_bar(current: int, total: int, start_time: float, label: str = "") -> None:

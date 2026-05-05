@@ -5,12 +5,13 @@ import sys
 import time
 from pathlib import Path
 
-from .constants import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS
+from .constants import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS, PPT_FORMATS
 from .utils import _get_files, _progress_bar, set_force_overwrite, set_allow_kill_office
 from .com_core import _batch_convert
 from .image_convert import image_to_pdf
 from .word_convert import WordConverter
 from .excel_convert import ExcelConverter
+from .ppt_convert import PptConverter
 from .merge import merge_pdfs
 
 
@@ -22,6 +23,7 @@ def parse_args() -> argparse.Namespace:
 快捷方式（任意终端直接输入）:
   runPDF -w                   Word→PDF
   runPDF -e                   Excel→PDF
+  runPDF -p                   PPT→PDF
   runPDF -m                   合并PDF
   runPDF -gr                  图片→PDF(灰度+递归)
   runPDF -mro 合集.pdf         合并+递归+指定输出
@@ -30,6 +32,8 @@ def parse_args() -> argparse.Namespace:
   python PDFgj.py              图片→PDF(彩色)      python PDFgj.py -gr        图片→PDF(灰度+递归)
   python PDFgj.py -w            Word→PDF            python PDFgj.py -wr        Word→PDF(递归)
   python PDFgj.py -e            Excel→PDF            python PDFgj.py -er        Excel→PDF(递归)
+  python PDFgj.py -p            PPT→PDF              python PDFgj.py -pr        PPT→PDF(递归)
+  python PDFgj.py -p --slides 1,3,5-8  PPT→PDF(指定页码)
   python PDFgj.py -m           合并PDF              python PDFgj.py -mro out  合并+递归+指定输出
   python -m pdfgj -w            Word→PDF(新入口)     python -m pdfgj -m        合并PDF(新入口)
         ''',
@@ -41,7 +45,10 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument('-g', '--gray', action='store_true', help='灰度模式：图片转灰度 PDF')
     mode.add_argument('-w', '--word', action='store_true', help='Word 模式：Word 文档转 PDF')
     mode.add_argument('-e', '--excel', action='store_true', help='Excel 模式：Excel 表格转 PDF')
+    mode.add_argument('-p', '--ppt', action='store_true', help='PPT 模式：PowerPoint 演示文稿转 PDF')
     p.add_argument('-o', '--output', type=str, default='merged.pdf', help='合并模式：指定输出文件名')
+    p.add_argument('--slides', type=str, default=None,
+                   help='PPT 模式：指定导出页码，如 "1,3,5-8"')
     p.add_argument('-r', '--recursive', action='store_true', help='递归查找子目录（适用于所有模式）')
     p.add_argument('--sortby', type=str, choices=['name', 'ctime', 'mtime'], default='name',
                    help='合并模式：排序依据（name/ctime/mtime）')
@@ -60,6 +67,10 @@ def parse_args() -> argparse.Namespace:
     has_sortby = _argv_has('--sortby')
     if (has_output or has_sortby) and not args.merge:
         p.error('-o / --sortby 只能在合并模式 (-m) 下使用')
+
+    has_slides = _argv_has('--slides')
+    if has_slides and not args.ppt:
+        p.error('--slides 只能在 PPT 模式 (-p) 下使用')
 
     return args
 
@@ -105,6 +116,17 @@ def main():
             return
         print(f"找到 {len(files)} 个 Excel 表格")
         failed = _batch_convert(files, ExcelConverter, "Excel→PDF")
+        _print_summary(len(files), failed)
+        return
+
+    # --- PPT 转 PDF（批量：仅启停一次 PowerPoint） ---
+    if args.ppt:
+        files = _get_files(cwd, PPT_FORMATS, recursive=args.recursive)
+        if not files:
+            print("当前目录未找到 PowerPoint 演示文稿 (.pptx / .ppt)")
+            return
+        print(f"找到 {len(files)} 个演示文稿")
+        failed = _batch_convert(files, lambda: PptConverter(slides=args.slides), "PPT→PDF")
         _print_summary(len(files), failed)
         return
 

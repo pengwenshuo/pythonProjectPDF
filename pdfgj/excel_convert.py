@@ -16,7 +16,6 @@ def _setup_excel(excel: Any) -> None:
     excel.DisplayAlerts = False
     excel.ScreenUpdating = False
     excel.AutomationSecurity = MSO_AUTOMATION_SECURITY_FORCE_DISABLE
-    excel.Calculation = XL_CALC_AUTOMATIC  # 公式自动重算，无需手动 Calculate()
     try:
         print(f"  [信息] Excel 版本: {excel.Version} (COM 常量 xlTypePDF={XL_TYPE_PDF})")
     except Exception:
@@ -41,6 +40,11 @@ def _convert_excel(excel: Any, excel_path: Path) -> bool:
         if wb is None:
             print(f"  [失败] {excel_path.name}: 文件无法打开（可能已损坏或设置了打开密码）")
             return False
+        # 打开工作簿后设置 Calculation，确保公式结果最新（某些版本在无工作簿时无法设置此属性）
+        try:
+            excel.Calculation = XL_CALC_AUTOMATIC
+        except Exception:
+            pass
         wb.ExportAsFixedFormat(XL_TYPE_PDF, str(pdf_path.absolute()))
         print(f"  [OK] {excel_path.name} → {pdf_path.name}")
         return True

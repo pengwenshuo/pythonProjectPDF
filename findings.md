@@ -1,21 +1,20 @@
 # 发现与决策
 
-## 模块化重构分析
+## PPT 转 PDF 功能
 
-### 当前状态
-- `PDFgj.py` 共 781 行，包含 ~18 个逻辑块
-- 结构清晰（有分区注释），但单文件过大不利于协作和维护
-- 无其他脚本依赖 PDFgj 的内部 import
+### COM 自动化模式
+- Word/Excel 转换器遵循完全相同的结构：_setup → _convert → 单文件函数 → 上下文管理器
+- PPT 可直接复用此模式，差异仅在 ExportAsFixedFormat 参数
 
-### 拆分方案
-- **粒度：** 中粒度（10 模块 + 根入口），每文件 30-140 行
-- **依赖方向：** constants → deps → utils → com_core → converters(image/word/excel/merge) → cli
-- **入口：** 保留 `PDFgj.py` 薄入口 + 新增 `python -m pdfgj`
+### PowerPoint ExportAsFixedFormat 关键参数
+- `Path=32` (ppSaveAsPDF)
+- `RangeType=1` (全部) 或 `RangeType=3` (指定范围)
+- 指定范围时需创建 `PrintRanges` 对象
 
-### 关键决策
-| 决策 | 理由 |
-|------|------|
-| 全局标志放 utils.py + setter 注入 | 避免循环依赖，最小改动 |
-| com_core.py 惰性 import win32com | 无 Office 用户处理图片不报错 |
-| 包内用相对 import | 可移植，不依赖安装路径 |
-| 自下而上创建 | 每步只引入已验证的下层，降低调试难度 |
+### 页码范围解析
+- 格式：`"1,3,5-8"` — 支持单页和范围组合
+- 需处理：超出范围裁剪、无效格式报错、空输入
+
+### 进程名映射
+- `PowerPoint.Application → POWERPNT.EXE`
+- 已有：`Word.Application → WINWORD.EXE`、`Excel.Application → EXCEL.EXE`

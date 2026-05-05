@@ -1,75 +1,66 @@
 # 进度日志
 
-## 会话：2026-05-01（第三轮 — 模块化重构）
+## 会话：2026-05-05（PPT 转 PDF 功能）
 
 ### 阶段 0：需求与设计
 - **状态：** complete
 - 执行的操作：
-  - 头脑风暴：分析 PDFgj.py 结构（781 行，18 个逻辑块）
-  - 确定拆分方案：中粒度，11 模块 + 根入口
-  - 明确关键决策：全局标志注入、COM 惰性导入、包内相对导入、双入口兼容
-  - 用户确认：全部目标（可维护/可测试/可复用/可扩展）+ 中粒度拆分 + 双入口兼容
+  - 头脑风暴：分析需求（PPT 格式、页码范围、CLI 参数）
+  - 确定方案：复用现有 COM 转换器模式（方案 A）
+  - 用户确认：全部设计细节
 - 创建/修改的文件：
-  - docs/superpowers/specs/2026-05-01-pdfgj-refactor-design.md（新建）
+  - docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md（新建）
 
-### 阶段 1：创建包骨架
+### 阶段 1：常量与进程映射
 - **状态：** complete
 - 执行的操作：
-  - 创建 pdfgj/ 目录
-  - 创建 constants.py（20 行）、deps.py（37 行）
+  - `constants.py` 添加 `PPT_FORMATS`、`PP_SAVE_AS_PDF`、`PP_PRINT_RANGE_ALL`、`PP_PRINT_RANGE_SLIDES`
+  - `com_core.py` 添加 `PowerPoint.Application → POWERPNT.EXE` 映射
+  - `com_core.py` 添加 PPT 特有 HRESULT 错误码
 - 创建/修改的文件：
-  - pdfgj/constants.py, pdfgj/deps.py
+  - pdfgj/constants.py, pdfgj/com_core.py
 
-### 阶段 2：工具层
+### 阶段 2：页码范围解析
 - **状态：** complete
 - 执行的操作：
-  - 创建 utils.py（73 行），包含全局标志 setter
-  - 使用 `from . import utils` 引用模式避免值快照
+  - `utils.py` 添加 `parse_slide_range()` 函数（60 行）
+  - 支持单页、范围、混合格式，自动裁剪超出范围页码
 - 创建/修改的文件：
   - pdfgj/utils.py
 
-### 阶段 3：COM 公共层
+### 阶段 3：PPT 转换器
 - **状态：** complete
 - 执行的操作：
-  - 创建 com_core.py（160 行），win32com 惰性导入
-  - `_com_quit` 通过 `utils._allow_kill_office` 读取运行时标志
+  - 新建 `ppt_convert.py`（130 行）
+  - 实现 `_setup_ppt`、`_convert_ppt`、`_export_slides`、`ppt_to_pdf`、`PptConverter`
+  - 指定范围时复制幻灯片到临时演示文稿后导出
 - 创建/修改的文件：
-  - pdfgj/com_core.py
+  - pdfgj/ppt_convert.py（新建）
 
-### 阶段 4：业务层（转换器）
+### 阶段 4：CLI 集成
 - **状态：** complete
 - 执行的操作：
-  - 并行创建 4 个转换模块
+  - `cli.py` 添加 `-p/--ppt` 互斥参数
+  - `cli.py` 添加 `--slides` 参数 + 校验逻辑
+  - `cli.py` 添加 PPT 主流程分支
+  - `cli.py` 更新帮助文本
 - 创建/修改的文件：
-  - pdfgj/image_convert.py（27 行）
-  - pdfgj/word_convert.py（85 行）
-  - pdfgj/excel_convert.py（86 行）
-  - pdfgj/merge.py（72 行）
+  - pdfgj/cli.py
 
-### 阶段 5：CLI 层 + 入口
+### 阶段 5：验证
 - **状态：** complete
 - 执行的操作：
-  - 创建 cli.py（101 行）
-  - 创建 __init__.py（公开 API 导出）
-  - 创建 __main__.py（python -m pdfgj 入口）
-  - 重写 PDFgj.py 为 6 行薄入口
-- 创建/修改的文件：
-  - pdfgj/cli.py, pdfgj/__init__.py, pdfgj/__main__.py, PDFgj.py（修改）
-
-### 阶段 6：验证与清理
-- **状态：** complete
-- 执行的操作：
-  - 语法检查 12 个模块 → 全部通过
-  - `python PDFgj.py -h` → 正常
-  - `python -m pdfgj -h` → 正常
+  - 语法检查 13 个模块 → 全部通过
+  - `python -m pdfgj -h` → 正常显示，-p 和 --slides 参数已添加
+  - `python -m pdfgj --slides 1,3,5-8` → 正确报错（需配合 -p 使用）
 - 创建/修改的文件：无
 
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
-| 语法检查 | python -m py_compile *.py | 12/12 通过 | 12/12 通过 | PASS |
-| 旧入口 | python PDFgj.py -h | 显示帮助 | 正常显示 | PASS |
-| 新入口 | python -m pdfgj -h | 显示帮助 | 正常显示 | PASS |
+| 语法检查 | python -m py_compile pdfgj/*.py | 13/13 通过 | 13/13 通过 | PASS |
+| 帮助文本 | python -m pdfgj -h | 显示 -p 和 --slides | 正常显示 | PASS |
+| 参数校验 | python -m pdfgj --slides 1,3,5-8 | 报错需配合 -p | 正确报错 | PASS |
 
 ## 错误日志
 （无错误）

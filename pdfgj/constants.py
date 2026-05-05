@@ -4,6 +4,7 @@
 IMG_FORMATS: set[str] = {'.jpg', '.jpeg', '.png', '.webp', '.bmp', '.gif', '.tiff', '.tif'}
 WORD_FORMATS: set[str] = {'.docx', '.doc'}
 EXCEL_FORMATS: set[str] = {'.xlsx', '.xls', '.xlsm'}
+PPT_FORMATS: set[str] = {'.pptx', '.ppt'}
 
 # ============================================================
 # COM 常量（参考 Microsoft Office 对象模型，Office 2007+ 均稳定）
@@ -20,3 +21,8 @@ MSO_AUTOMATION_SECURITY_FORCE_DISABLE: int = 3  # msoAutomationSecurityForceDisa
 XL_TYPE_PDF: int = 0              # xlTypePDF
 # Excel: XlCalculation 枚举
 XL_CALC_AUTOMATIC: int = -4105    # xlCalculationAutomatic
+# PowerPoint: PpSaveAsFileType 枚举
+PP_SAVE_AS_PDF: int = 32          # ppSaveAsPDF
+# PowerPoint: PpPrintRangeType 枚举
+PP_PRINT_RANGE_ALL: int = 1       # ppPrintAll
+PP_PRINT_RANGE_SLIDES: int = 3    # ppPrintSlideRange
