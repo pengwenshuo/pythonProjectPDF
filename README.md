@@ -132,7 +132,7 @@ merge_pdfs(".")
 
 ```bash
 # 安装测试依赖
-pip install pytest
+pip install -e ".[test]"
 
 # 运行测试
 pytest tests/ -v

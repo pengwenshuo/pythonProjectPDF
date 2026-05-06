@@ -14,5 +14,17 @@ dependencies = [
     "pywin32>=300; sys_platform == 'win32'",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+]
+
 [project.scripts]
 pdfgj = "pdfgj.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: 标记为慢速测试（可用 -m 'not slow' 跳过）",
+    "integration: 标记为集成测试",
+]
