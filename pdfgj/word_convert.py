@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from .constants import WD_FORMAT_PDF, WD_DO_NOT_SAVE_CHANGES, WD_ALERTS_NONE, MSO_AUTOMATION_SECURITY_FORCE_DISABLE
-from .deps import DispatchEx, pythoncom, _has_win32
+from .deps import DispatchEx, _has_win32
 from .utils import _check_overwrite
-from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file
+from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file, COMConverter
 
 
 def _setup_word(word: Any) -> None:
@@ -72,7 +72,7 @@ def word_to_pdf(word_path: Path) -> bool:
         _com_quit(word, 'Word.Application')
 
 
-class WordConverter:
+class WordConverter(COMConverter):
     """
     Word 转 PDF 上下文管理器，复用同一 Application 实例批量转换。
 
@@ -81,29 +81,13 @@ class WordConverter:
             wc.convert('a.docx')
             wc.convert('b.docx')
     """
-    def __init__(self) -> None:
-        if not _has_win32:
-            raise RuntimeError("缺少 pywin32 库。请运行: pip install pywin32")
-        self._app = None
-        self._com_uninit_needed: bool = False
 
-    def __enter__(self) -> 'WordConverter':
-        hr = pythoncom.CoInitialize()  # type: ignore[union-attr]
-        # S_OK(0)=成功需要Uninit, S_FALSE(1)=已初始化不需要, 其他=失败
-        self._com_uninit_needed = (hr == 0)
-        self._app = DispatchEx('Word.Application')
-        _setup_word(self._app)
-        return self
+    @property
+    def app_name(self) -> str:
+        return 'Word.Application'
 
-    def __exit__(self, *args) -> None:
-        if self._app is not None:
-            _com_quit(self._app, 'Word.Application')
-        self._app = None
-        if self._com_uninit_needed:
-            try:
-                pythoncom.CoUninitialize()  # type: ignore[union-attr]
-            except Exception:
-                pass
+    def setup(self, app: Any) -> None:
+        _setup_word(app)
 
     def convert(self, path: Path | str) -> bool:
         """转换单个 Word 文档为 PDF（复用当前 Application 实例）"""

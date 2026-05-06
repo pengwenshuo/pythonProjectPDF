@@ -1,46 +1,51 @@
-# 任务计划：PPT 转 PDF 功能
+# 任务计划：PDFgj 项目问题修复
 
 ## 目标
-按照 `docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md` 设计规范，为 PDFgj 添加 PowerPoint 演示文稿转 PDF 功能。
+修复所有优化类问题和 Bug 类问题，解决短期建议类问题。
 
 ## 当前阶段
 全部完成
 
 ## 各阶段
 
-### 阶段 1：常量与进程映射
-- [x] `constants.py` 添加 `PPT_FORMATS`、`PP_SAVE_AS_PDF`、`PP_PRINT_RANGE_ALL`、`PP_PRINT_RANGE_SLIDES`
-- [x] `com_core.py` 添加 `PowerPoint.Application → POWERPNT.EXE` 映射
-- [x] `com_core.py` 的 `_classify_com_error()` 添加 PPT 特有 HRESULT
+### 阶段 1：Bug 修复
+- [x] 修复 `_is_com_error` 函数逻辑错误
+- [x] 改进 `parse_slide_range` 错误处理
 - **状态：** complete
 
-### 阶段 2：页码范围解析
-- [x] `utils.py` 添加 `parse_slide_range()` 函数
+### 阶段 2：优化类问题修复
+- [x] 重构 COM 转换器，抽取基类
+- [x] 改进进度条在非交互式环境中的表现
+- [x] 改进文件预检逻辑
 - **状态：** complete
 
-### 阶段 3：PPT 转换器
-- [x] 新建 `ppt_convert.py`（_setup_ppt、_convert_ppt、_export_slides、ppt_to_pdf、PptConverter）
+### 阶段 3：短期建议实现
+- [x] 添加单元测试框架
+- [x] 改进错误消息
+- [x] 完善类型注解和文档字符串
 - **状态：** complete
 
-### 阶段 4：CLI 集成
-- [x] `cli.py` 添加 `-p/--ppt` 互斥参数
-- [x] `cli.py` 添加 `--slides` 参数 + 校验逻辑
-- [x] `cli.py` 添加 PPT 主流程分支
-- [x] `cli.py` 更新帮助文本
+### 阶段 4：验证与测试
+- [x] 语法检查所有模块
+- [x] 运行单元测试
+- [x] 手动验证功能
 - **状态：** complete
 
-### 阶段 5：验证
-- [x] 语法检查所有模块（13/13 通过）
-- [x] `python -m pdfgj -h` 验证帮助文本
-- [x] `python -m pdfgj --slides 1,3,5-8` 验证参数校验
-- **状态：** complete
+### 阶段 4：验证与测试
+- [ ] 语法检查所有模块
+- [ ] 运行单元测试
+- [ ] 手动验证功能
+- **状态：** pending
 
-## 关键决策
-| 决策 | 理由 |
-|------|------|
-| 复用现有 COM 转换器模式 | 3 个转换器重复代码量可控，不需抽取基类 |
-| --slides 参数与 -p 绑定 | 与 --output 仅在 -m 下有效的校验逻辑一致 |
-| PptConverter 构造函数接收 slides | 批量转换时所有文件共享同一页码范围 |
+## 问题清单
+| 文件 | 问题类型 | 描述 | 状态 |
+|------|---------|------|------|
+| com_core.py | Bug | `_is_com_error` 函数逻辑错误 | 待修复 |
+| utils.py | Bug | `parse_slide_range` 未处理 total_slides=0 | 待修复 |
+| word/excel/ppt_convert.py | 优化 | COM 转换器代码重复 | 待修复 |
+| utils.py | 优化 | 进度条非交互式环境问题 | 待修复 |
+| com_core.py | 优化 | 文件预检可能误判 | 待修复 |
 
-## 设计文档
-`docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md`
+## 备注
+- 项目无自动化测试，需手动验证
+- 所有文档和用户界面使用简体中文

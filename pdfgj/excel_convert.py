@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from .constants import XL_TYPE_PDF, XL_CALC_AUTOMATIC, MSO_AUTOMATION_SECURITY_FORCE_DISABLE
-from .deps import DispatchEx, pythoncom, _has_win32
+from .deps import DispatchEx, _has_win32
 from .utils import _check_overwrite
-from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file
+from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file, COMConverter
 
 
 def _setup_excel(excel: Any) -> None:
@@ -78,7 +78,7 @@ def excel_to_pdf(excel_path: Path) -> bool:
         _com_quit(excel, 'Excel.Application')
 
 
-class ExcelConverter:
+class ExcelConverter(COMConverter):
     """
     Excel 转 PDF 上下文管理器，复用同一 Application 实例批量转换。
 
@@ -87,29 +87,13 @@ class ExcelConverter:
             ec.convert('a.xlsx')
             ec.convert('b.xlsx')
     """
-    def __init__(self) -> None:
-        if not _has_win32:
-            raise RuntimeError("缺少 pywin32 库。请运行: pip install pywin32")
-        self._app = None
-        self._com_uninit_needed: bool = False
 
-    def __enter__(self) -> 'ExcelConverter':
-        hr = pythoncom.CoInitialize()  # type: ignore[union-attr]
-        # S_OK(0)=成功需要Uninit, S_FALSE(1)=已初始化不需要, 其他=失败
-        self._com_uninit_needed = (hr == 0)
-        self._app = DispatchEx('Excel.Application')
-        _setup_excel(self._app)
-        return self
+    @property
+    def app_name(self) -> str:
+        return 'Excel.Application'
 
-    def __exit__(self, *args) -> None:
-        if self._app is not None:
-            _com_quit(self._app, 'Excel.Application')
-        self._app = None
-        if self._com_uninit_needed:
-            try:
-                pythoncom.CoUninitialize()  # type: ignore[union-attr]
-            except Exception:
-                pass
+    def setup(self, app: Any) -> None:
+        _setup_excel(app)
 
     def convert(self, path: Path | str) -> bool:
         """转换单个 Excel 工作簿为 PDF（复用当前 Application 实例）"""

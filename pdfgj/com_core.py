@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from . import utils
-from .deps import _has_win32
+from .deps import _has_win32, DispatchEx, pythoncom
 
 
 # ============================================================
@@ -127,8 +127,8 @@ def _com_quit(app: Any, name: str, max_retries: int = 3) -> None:
 # ============================================================
 def _is_com_error(err: Exception) -> bool:
     """判断异常是否为 COM 相关错误"""
-    return (type(err).__qualname__ == 'com_error'
-            or type(err).__module__ == 'pywintypes' and type(err).__qualname__ == 'error')
+    return (type(err).__qualname__ == 'com_error' or
+            (type(err).__module__ == 'pywintypes' and type(err).__qualname__ == 'error'))
 
 
 def _classify_com_error(err: Exception) -> str:
@@ -160,19 +160,22 @@ def _classify_com_error(err: Exception) -> str:
 # 文件预检
 # ============================================================
 def _precheck_file(file_path: Path) -> str | None:
-    """打开前预检文件状态，返回错误原因字符串或 None（表示正常）"""
+    """打开前预检文件状态，返回错误原因字符串或 None（表示正常）。
+
+    仅检查文件是否存在和是否为文件，其他问题（如权限）交给 COM 操作处理。
+    """
     if not file_path.exists():
         return f"文件不存在: {file_path.name}"
     if not file_path.is_file():
         return f"路径不是文件: {file_path.name}"
+    # 可读性检查改为警告，不阻断操作
     try:
-        # 检查文件是否可读（是否被独占锁定）
         with open(file_path, 'rb') as f:
             f.read(1)
     except PermissionError:
-        return f"文件被其他程序独占锁定，无法读取: {file_path.name}"
+        print(f"  [警告] 文件可能被锁定: {file_path.name}")
     except OSError as e:
-        return f"文件访问异常: {file_path.name} ({e})"
+        print(f"  [警告] 文件访问异常: {file_path.name} ({e})")
     return None
 
 
@@ -205,3 +208,53 @@ def _batch_convert(files: list[Path], converter_cls: type, label: str = "") -> l
         else:
             traceback.print_exc()
         return [f.name for f in files]
+
+
+# ============================================================
+# COM 转换器基类
+# ============================================================
+class COMConverter:
+    """COM 转换器基类，提供统一的上下文管理器实现。
+
+    子类必须实现：
+        - app_name: 返回 COM 应用名称
+        - setup(app): 配置 COM 应用
+        - convert(path): 转换单个文件
+    """
+
+    def __init__(self) -> None:
+        if not _has_win32:
+            raise RuntimeError("缺少 pywin32 库。请运行: pip install pywin32")
+        self._app = None
+        self._com_uninit_needed: bool = False
+
+    @property
+    def app_name(self) -> str:
+        """返回 COM 应用名称（子类必须实现）"""
+        raise NotImplementedError
+
+    def setup(self, app: Any) -> None:
+        """配置 COM 应用（子类必须实现）"""
+        raise NotImplementedError
+
+    def convert(self, path: Path | str) -> bool:
+        """转换单个文件（子类必须实现）"""
+        raise NotImplementedError
+
+    def __enter__(self) -> 'COMConverter':
+        hr = pythoncom.CoInitialize()  # type: ignore[union-attr]
+        # S_OK(0)=成功需要Uninit, S_FALSE(1)=已初始化不需要, 其他=失败
+        self._com_uninit_needed = (hr == 0)
+        self._app = DispatchEx(self.app_name)  # type: ignore[union-attr]
+        self.setup(self._app)
+        return self
+
+    def __exit__(self, *args) -> None:
+        if self._app is not None:
+            _com_quit(self._app, self.app_name)
+        self._app = None
+        if self._com_uninit_needed:
+            try:
+                pythoncom.CoUninitialize()  # type: ignore[union-attr]
+            except Exception:
+                pass

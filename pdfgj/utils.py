@@ -1,6 +1,7 @@
 """工具函数：排序、文件获取、进度条、覆盖保护、全局标志"""
 
 import re
+import sys
 import time
 from pathlib import Path
 
@@ -41,6 +42,8 @@ def parse_slide_range(spec: str, total_slides: int) -> list[int]:
     """
     if not spec or not spec.strip():
         raise ValueError("页码范围不能为空")
+    if total_slides <= 0:
+        raise ValueError(f"演示文稿没有幻灯片（总数: {total_slides}）")
 
     pages: set[int] = set()
     for part in spec.split(','):
@@ -87,9 +90,23 @@ def parse_slide_range(spec: str, total_slides: int) -> list[int]:
 # 进度条
 # ============================================================
 def _progress_bar(current: int, total: int, start_time: float, label: str = "") -> None:
-    """自实现轻量进度条：百分比 + 已用时间 + 预估剩余时间"""
+    """自实现轻量进度条：百分比 + 已用时间 + 预估剩余时间
+
+    在交互式终端中显示完整进度条，在非交互式环境（如重定向到文件）中仅输出完成信息。
+    """
     if total == 0:
         return
+
+    # 非交互式环境：仅在完成时输出一行
+    if not sys.stdout.isatty():
+        if current >= total:
+            elapsed = time.time() - start_time
+            elapsed_str = f"{elapsed:.0f}s" if elapsed < 120 else f"{elapsed/60:.1f}min"
+            prefix = f"{label}: " if label else ""
+            print(f"  {prefix}完成 {current}/{total}，耗时 {elapsed_str}")
+        return
+
+    # 交互式环境：显示完整进度条
     pct = current / total
     bar_len = 30
     filled = int(bar_len * pct)

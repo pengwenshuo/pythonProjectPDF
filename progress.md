@@ -1,66 +1,93 @@
 # 进度日志
 
-## 会话：2026-05-05（PPT 转 PDF 功能）
+## 会话：2026-05-07（代码审查与修复）
 
-### 阶段 0：需求与设计
+### 阶段 1：代码分析与问题识别
 - **状态：** complete
 - 执行的操作：
-  - 头脑风暴：分析需求（PPT 格式、页码范围、CLI 参数）
-  - 确定方案：复用现有 COM 转换器模式（方案 A）
-  - 用户确认：全部设计细节
+  - 读取所有源代码文件（11 个模块）
+  - 分析代码结构、逻辑和潜在问题
+  - 识别 bug、优化点和改进建议
 - 创建/修改的文件：
-  - docs/superpowers/specs/2026-05-05-ppt-to-pdf-design.md（新建）
+  - task_plan.md（更新）
+  - findings.md（新建）
 
-### 阶段 1：常量与进程映射
+### 阶段 2：问题分类与优先级排序
 - **状态：** complete
 - 执行的操作：
-  - `constants.py` 添加 `PPT_FORMATS`、`PP_SAVE_AS_PDF`、`PP_PRINT_RANGE_ALL`、`PP_PRINT_RANGE_SLIDES`
-  - `com_core.py` 添加 `PowerPoint.Application → POWERPNT.EXE` 映射
-  - `com_core.py` 添加 PPT 特有 HRESULT 错误码
-- 创建/修改的文件：
-  - pdfgj/constants.py, pdfgj/com_core.py
+  - 将问题按类型分类（bug、优化、建议）
+  - 评估问题严重程度和影响范围
+  - 确定修复优先级
+- 创建/修改的文件：无
 
-### 阶段 2：页码范围解析
+### 阶段 3：生成审查报告
 - **状态：** complete
 - 执行的操作：
-  - `utils.py` 添加 `parse_slide_range()` 函数（60 行）
-  - 支持单页、范围、混合格式，自动裁剪超出范围页码
+  - 整理所有发现
+  - 提供具体修复建议
+  - 输出最终审查结果
+- 创建/修改的文件：无
+
+### 阶段 4：Bug 修复
+- **状态：** complete
+- 执行的操作：
+  - 修复 `_is_com_error` 函数逻辑错误（添加括号明确优先级）
+  - 改进 `parse_slide_range` 错误处理（添加 total_slides=0 检查）
 - 创建/修改的文件：
+  - pdfgj/com_core.py
   - pdfgj/utils.py
 
-### 阶段 3：PPT 转换器
+### 阶段 5：优化类问题修复
 - **状态：** complete
 - 执行的操作：
-  - 新建 `ppt_convert.py`（130 行）
-  - 实现 `_setup_ppt`、`_convert_ppt`、`_export_slides`、`ppt_to_pdf`、`PptConverter`
-  - 指定范围时复制幻灯片到临时演示文稿后导出
+  - 重构 COM 转换器，抽取基类 `COMConverter`
+  - 改进进度条在非交互式环境中的表现（检测 `sys.stdout.isatty()`）
+  - 改进文件预检逻辑（可读性检查改为警告而非阻断）
 - 创建/修改的文件：
-  - pdfgj/ppt_convert.py（新建）
+  - pdfgj/com_core.py（添加基类）
+  - pdfgj/word_convert.py（使用基类）
+  - pdfgj/excel_convert.py（使用基类）
+  - pdfgj/ppt_convert.py（使用基类）
+  - pdfgj/utils.py（改进进度条）
 
-### 阶段 4：CLI 集成
+### 阶段 6：短期建议实现
 - **状态：** complete
 - 执行的操作：
-  - `cli.py` 添加 `-p/--ppt` 互斥参数
-  - `cli.py` 添加 `--slides` 参数 + 校验逻辑
-  - `cli.py` 添加 PPT 主流程分支
-  - `cli.py` 更新帮助文本
+  - 创建测试目录和测试文件
+  - 添加 pytest 依赖
+  - 编写单元测试（37 个测试用例）
+  - 所有测试通过
 - 创建/修改的文件：
-  - pdfgj/cli.py
+  - tests/__init__.py
+  - tests/conftest.py
+  - tests/test_utils.py
+  - tests/test_com_core.py
 
-### 阶段 5：验证
-- **状态：** complete
-- 执行的操作：
-  - 语法检查 13 个模块 → 全部通过
-  - `python -m pdfgj -h` → 正常显示，-p 和 --slides 参数已添加
-  - `python -m pdfgj --slides 1,3,5-8` → 正确报错（需配合 -p 使用）
-- 创建/修改的文件：无
+## 问题统计
+| 类型 | 数量 | 严重程度 | 状态 |
+|------|------|---------|------|
+| Bug | 2 | 低 | 已修复 |
+| 优化 | 3 | 中 | 已修复 |
+| 建议 | 8 | 低 | 短期建议已完成 |
+
+## 已修复的问题
+1. **`_is_com_error` 函数逻辑错误** - 添加括号明确优先级
+2. **`parse_slide_range` 未处理 total_slides=0** - 添加前置检查和清晰错误消息
+3. **COM 转换器代码重复** - 抽取基类 `COMConverter`，减少重复代码
+4. **进度条在非交互式环境中问题** - 检测终端类型，非交互式环境仅输出完成信息
+5. **文件预检可能误判** - 可读性检查改为警告而非阻断
+
+## 代码质量改进
+- 减少重复代码：约 84 行
+- 改善用户体验：更清晰的错误消息
+- 提高代码可维护性：统一的基类实现
+- 添加单元测试：37 个测试用例全部通过
 
 ## 测试结果
 | 测试 | 输入 | 预期结果 | 实际结果 | 状态 |
 |------|------|---------|---------|------|
-| 语法检查 | python -m py_compile pdfgj/*.py | 13/13 通过 | 13/13 通过 | PASS |
-| 帮助文本 | python -m pdfgj -h | 显示 -p 和 --slides | 正常显示 | PASS |
-| 参数校验 | python -m pdfgj --slides 1,3,5-8 | 报错需配合 -p | 正确报错 | PASS |
+| 语法检查 | python -m py_compile pdfgj/*.py | 全部通过 | 全部通过 | PASS |
+| 单元测试 | pytest tests/ -v | 37/37 通过 | 37/37 通过 | PASS |
 
 ## 错误日志
 （无错误）

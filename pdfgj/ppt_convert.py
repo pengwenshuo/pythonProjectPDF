@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from .constants import PP_SAVE_AS_PDF, MSO_AUTOMATION_SECURITY_FORCE_DISABLE
-from .deps import DispatchEx, pythoncom, _has_win32
+from .deps import DispatchEx, _has_win32
 from .utils import _check_overwrite, parse_slide_range
-from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file
+from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_file, COMConverter
 
 
 def _setup_ppt(ppt: Any) -> None:
@@ -107,7 +107,7 @@ def ppt_to_pdf(ppt_path: Path, slides: str | None = None) -> bool:
         _com_quit(ppt, 'PowerPoint.Application')
 
 
-class PptConverter:
+class PptConverter(COMConverter):
     """
     PowerPoint 转 PDF 上下文管理器，复用同一 Application 实例批量转换。
 
@@ -116,29 +116,17 @@ class PptConverter:
             pc.convert('a.pptx')
             pc.convert('b.pptx')
     """
+
     def __init__(self, slides: str | None = None) -> None:
-        if not _has_win32:
-            raise RuntimeError("缺少 pywin32 库。请运行: pip install pywin32")
+        super().__init__()
         self._slides = slides
-        self._app = None
-        self._com_uninit_needed: bool = False
 
-    def __enter__(self) -> 'PptConverter':
-        hr = pythoncom.CoInitialize()  # type: ignore[union-attr]
-        self._com_uninit_needed = (hr == 0)
-        self._app = DispatchEx('PowerPoint.Application')
-        _setup_ppt(self._app)
-        return self
+    @property
+    def app_name(self) -> str:
+        return 'PowerPoint.Application'
 
-    def __exit__(self, *args) -> None:
-        if self._app is not None:
-            _com_quit(self._app, 'PowerPoint.Application')
-        self._app = None
-        if self._com_uninit_needed:
-            try:
-                pythoncom.CoUninitialize()  # type: ignore[union-attr]
-            except Exception:
-                pass
+    def setup(self, app: Any) -> None:
+        _setup_ppt(app)
 
     def convert(self, path: Path | str) -> bool:
         """转换单个 PowerPoint 演示文稿为 PDF（复用当前 Application 实例）"""
