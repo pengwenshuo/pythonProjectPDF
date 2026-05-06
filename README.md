@@ -1,47 +1,71 @@
-# PDFgj — 图片 / Word / Excel / PPT 转 PDF 与 PDF 合并工具
+# PDFgj
 
-一款 Windows 平台 Python 命令行工具，可将图片、Word 文档、Excel 表格、PowerPoint 演示文稿批量转换为 PDF，并支持 PDF 合并。
+一款 Windows 平台的 Python 命令行工具，用于图片/Word/Excel/PPT 转 PDF 以及 PDF 合并。
 
-## 功能
+## 功能特性
 
-- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等常见格式，自动处理透明背景（白底填充），支持灰度模式
-- **Word 转 PDF** — 通过 Word COM 对象批量转换 .docx / .doc，仅启动一次 Word，支持进度显示
-- **Excel 转 PDF** — 通过 Excel COM 对象批量转换 .xlsx / .xls / .xlsm，自动重算公式，仅启动一次 Excel
-- **PPT 转 PDF** — 通过 PowerPoint COM 对象批量转换 .pptx / .ppt，支持指定页码范围导出，仅启动一次 PowerPoint
-- **PDF 合并** — 流式合并目录下多个 PDF，支持按名称/创建时间/修改时间排序
-- **递归扫描** — 所有模式均支持 `-r` 递归处理子目录
-- **覆盖保护** — 同名 PDF 存在时提示确认，支持 `-y` 跳过确认（批量自动化）
-- **COM 进程管理** — 转换完成后安全退出 Office 进程，异常时按 PID 精确终止
+- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等格式，自动处理透明背景，支持灰度模式
+- **Word 转 PDF** — 通过 COM 自动化批量转换 .docx/.doc，仅启动一次 Word
+- **Excel 转 PDF** — 通过 COM 自动化批量转换 .xlsx/.xls/.xlsm，自动重算公式
+- **PPT 转 PDF** — 通过 COM 自动化批量转换 .pptx/.ppt，支持指定页码范围导出
+- **PDF 合并** — 流式合并目录下多个 PDF，支持按名称/时间排序
+- **递归扫描** — 所有模式均支持递归处理子目录
+- **覆盖保护** — 同名文件存在时提示确认，支持 `-y` 跳过确认
 
 ## 系统要求
 
-- Windows 7+（Word/Excel 转 PDF 需要安装对应的 Office 组件）
+- Windows 7+（Word/Excel/PPT 转换需要安装对应的 Office 组件）
 - Python 3.9+
 
 ## 安装
 
 ```bash
-# 1. 克隆或下载项目
-# 2. 安装（推荐使用虚拟环境）
+# 克隆仓库
+git clone https://github.com/pengwenshuo/pythonProjectPDF.git
+cd pythonProjectPDF
+
+# 创建虚拟环境（推荐）
+python -m venv .venv
+.venv\Scripts\activate
+
+# 安装（开发模式）
 pip install -e .
 ```
 
-安装后即可在任意目录使用 `pdfgj` 命令。
+## 使用方法
 
-## 使用方式
+### 命令行使用
+
+```bash
+# 图片转 PDF（默认模式）
+pdfgj                    # 当前目录所有图片
+pdfgj -g                 # 灰度模式
+pdfgj -r                 # 递归子目录
+
+# Word 转 PDF
+pdfgj -w                 # 当前目录所有 Word 文档
+pdfgj -wr                # 递归子目录
+
+# Excel 转 PDF
+pdfgj -e                 # 当前目录所有 Excel 表格
+pdfgj -er                # 递归子目录
+
+# PPT 转 PDF
+pdfgj -p                 # 当前目录所有 PPT
+pdfgj -pr                # 递归子目录
+pdfgj -p --slides 1,3,5-8  # 指定页码范围
+
+# PDF 合并
+pdfgj -m                 # 合并为 merged.pdf
+pdfgj -m -o output.pdf   # 指定输出文件名
+pdfgj -m --sortby mtime  # 按修改时间排序
+```
 
 ### Python 模块调用
 
 ```bash
-python -m pdfgj -w    # Word → PDF
-python -m pdfgj -m    # 合并 PDF
-```
-
-### 安装为命令（可选）
-
-```bash
-pip install -e .
-pdfgj -w              # 安装后任意目录可用（需先激活虚拟环境）
+python -m pdfgj -w       # Word → PDF
+python -m pdfgj -m       # 合并 PDF
 ```
 
 ### 作为库使用
@@ -67,8 +91,8 @@ merge_pdfs(".")
 | `-p`, `--ppt` | PPT 模式：PowerPoint 演示文稿转 PDF |
 | `--slides` | PPT 模式：指定导出页码，如 "1,3,5-8" |
 | `-o`, `--output` | 合并模式：指定输出文件名（默认 merged.pdf） |
-| `-r`, `--recursive` | 递归查找子目录（适用于所有模式） |
-| `--sortby` | 合并排序依据（name / ctime / mtime，默认 name） |
+| `-r`, `--recursive` | 递归查找子目录 |
+| `--sortby` | 合并排序依据（name / ctime / mtime） |
 | `-y`, `--yes` | 跳过所有覆盖确认 |
 | `--kill-office` | 允许按进程名终止 Office 进程 |
 
@@ -85,7 +109,7 @@ merge_pdfs(".")
 
 ```
 ├── pyproject.toml            # 打包配置与依赖声明
-├── runPDF.bat                # 快捷运行脚本（加入 PATH 后任意目录可用）
+├── runPDF.bat                # 快捷运行脚本
 ├── pdfgj/                    # 核心模块包
 │   ├── cli.py                # 命令行参数解析与主流程
 │   ├── image_convert.py      # 图片转 PDF
@@ -95,7 +119,38 @@ merge_pdfs(".")
 │   ├── merge.py              # PDF 合并
 │   ├── com_core.py           # COM 公共层（进程管理/错误分类）
 │   ├── constants.py          # 文件格式常量与 COM 常量
-│   ├── deps.py               # 依赖检测（pypdf / win32com）
+│   ├── deps.py               # 依赖检测
 │   └── utils.py              # 工具函数（排序/进度条/覆盖保护）
-└── requirements.txt          # Python 依赖（备选安装方式）
+└── tests/                    # 单元测试
+    ├── test_utils.py         # utils 模块测试
+    └── test_com_core.py      # com_core 模块测试
 ```
+
+## 开发
+
+### 运行测试
+
+```bash
+# 安装测试依赖
+pip install pytest
+
+# 运行测试
+pytest tests/ -v
+```
+
+### 语法检查
+
+```bash
+python -m py_compile pdfgj/*.py
+```
+
+## 注意事项
+
+- Word/Excel/PPT 转换功能仅在 Windows 平台可用，且需要安装对应的 Office 组件
+- 图片转 PDF 和 PDF 合成功能是跨平台的
+- 转换过程中会启动 Office 应用，转换完成后会自动关闭
+- 使用 `--kill-office` 参数时请确保没有其他未保存的 Office 文档
+
+## 许可证
+
+MIT License
