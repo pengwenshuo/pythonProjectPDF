@@ -12,7 +12,8 @@ from .com_core import _com_quit, _is_com_error, _classify_com_error, _precheck_f
 
 def _setup_ppt(ppt: Any) -> None:
     """配置 PowerPoint 应用：禁用弹窗、宏"""
-    ppt.Visible = False
+    # PowerPoint 不支持 Visible = False，会报错：
+    # "Hiding the application window is not allowed"
     ppt.DisplayAlerts = False
     ppt.AutomationSecurity = MSO_AUTOMATION_SECURITY_FORCE_DISABLE
     try:
