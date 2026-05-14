@@ -96,11 +96,13 @@ class PDFProcessor:
         # 如果有旋转，需要矫正
         if rotation != 0:
             from pypdf import PageObject, Transformation
-            # 创建新的页面，应用反向旋转
-            new_page = PageObject.create_blank_page(
-                width=page.mediabox.width,
-                height=page.mediabox.height
-            )
+            w = float(page.mediabox.width)
+            h = float(page.mediabox.height)
+            # 90/270度旋转时交换宽高
+            if rotation in (90, 270, -90, -270):
+                w, h = h, w
+            new_page = PageObject.create_blank_page(width=w, height=h)
+            # 旋转围绕页面中心点
             new_page.merge_transformed_page(
                 page,
                 Transformation().rotate(-rotation)
