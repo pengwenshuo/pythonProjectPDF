@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .deps import _has_pypdf, PdfMerger, PdfReader, PdfWriter
 from .utils import _get_files, natural_sort_key, _check_overwrite, _progress_bar
+from .pdf_processor import PDFProcessor
 
 
 def _get_all_pdfs(directory: Path, recursive: bool = False, exclude: set[str] | None = None) -> list[Path]:
@@ -36,6 +37,9 @@ def merge_pdfs(directory: Path, output_name: str = "merged.pdf", recursive: bool
     if not _check_overwrite(out_path):
         return False
 
+    # 创建PDF处理器
+    processor = PDFProcessor()
+
     # 流式合并：使用 PdfWriter 逐文件追加，PdfReader 读完即释放
     writer = PdfWriter()  # type: ignore[misc]
     failed: list[Path] = []
@@ -44,21 +48,28 @@ def merge_pdfs(directory: Path, output_name: str = "merged.pdf", recursive: bool
 
     for i, pdf in enumerate(pdf_files, 1):
         _progress_bar(i, total, t0, "合并中")
-        reader = None
+
+        # 验证文件
+        is_valid, error_msg = processor.validate_file(pdf)
+        if not is_valid:
+            print(f"\r  [跳过] {pdf.name}: {error_msg}")
+            failed.append(pdf)
+            continue
+
+        # 处理PDF
         try:
-            reader = PdfReader(str(pdf))
-            for page in reader.pages:
+            success, pages, error_msg = processor.process_pdf(pdf)
+            if not success:
+                print(f"\r  [跳过] {pdf.name}: {error_msg}")
+                failed.append(pdf)
+                continue
+
+            # 添加页面到writer
+            for page in pages:
                 writer.add_page(page)
         except Exception as err:
             print(f"\r  [跳过] {pdf.name}: {err}")
             failed.append(pdf)
-        finally:
-            # 安全关闭 reader，关闭失败不影响合并结果
-            if reader is not None:
-                try:
-                    reader.stream.close()
-                except Exception:
-                    pass
 
     # 进度条收尾换行
     _progress_bar(total, total, t0, "合并中")
