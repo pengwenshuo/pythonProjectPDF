@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等格式，自动处理透明背景，支持灰度模式
+- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等格式，自动处理透明背景，支持灰度模式，自动矫正 EXIF 方向，GIF 只取第一帧
 - **Word 转 PDF** — 通过 COM 自动化批量转换 .docx/.doc，仅启动一次 Word
 - **Excel 转 PDF** — 通过 COM 自动化批量转换 .xlsx/.xls/.xlsm，自动重算公式
 - **PPT 转 PDF** — 通过 COM 自动化批量转换 .pptx/.ppt，支持指定页码范围导出
@@ -113,6 +113,7 @@ merge_pdfs(".")
 ├── pdfgj/                    # 核心模块包
 │   ├── cli.py                # 命令行参数解析与主流程
 │   ├── image_convert.py      # 图片转 PDF
+│   ├── image_processor.py    # 图片预处理器（验证/EXIF矫正/GIF处理）
 │   ├── word_convert.py       # Word 转 PDF（COM）
 │   ├── excel_convert.py      # Excel 转 PDF（COM）
 │   ├── ppt_convert.py        # PPT 转 PDF（COM）
@@ -125,7 +126,8 @@ merge_pdfs(".")
 └── tests/                    # 单元测试
     ├── test_utils.py         # utils 模块测试
     ├── test_com_core.py      # com_core 模块测试
-    └── test_pdf_processor.py # pdf_processor 模块测试
+    ├── test_pdf_processor.py # pdf_processor 模块测试
+    └── test_image_processor.py # image_processor 模块测试
 ```
 
 ## 开发
