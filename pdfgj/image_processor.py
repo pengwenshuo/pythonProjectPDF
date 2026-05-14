@@ -41,13 +41,25 @@ class ImageProcessor:
         try:
             # GIF只取第一帧
             if image_path.suffix.lower() == '.gif':
-                img = self._extract_gif_frame(img)
+                new_img = self._extract_gif_frame(img)
+                if new_img is None:
+                    print(f"  [跳过] {image_path.name}: GIF取帧失败")
+                    return None
+                if new_img is not img:
+                    img.close()
+                img = new_img
 
             # EXIF方向矫正
-            img = self._fix_exif_orientation(img)
+            new_img = self._fix_exif_orientation(img)
+            if new_img is not img:
+                img.close()
+            img = new_img
 
             # 格式转换（RGBA/P → RGB）
-            img = self._normalize_mode(img)
+            new_img = self._normalize_mode(img)
+            if new_img is not img:
+                img.close()
+            img = new_img
 
             return img
         except MemoryError:
@@ -67,7 +79,7 @@ class ImageProcessor:
             # EXIF读取失败，返回原图
             return img
 
-    def _extract_gif_frame(self, img: Image.Image) -> Image.Image:
+    def _extract_gif_frame(self, img: Image.Image) -> Image.Image | None:
         """提取GIF第一帧"""
         try:
             img.seek(0)
@@ -76,8 +88,12 @@ class ImageProcessor:
             img.close()
             return frame
         except Exception:
-            # 取帧失败，返回原图
-            return img
+            # 取帧失败，尝试重新打开
+            try:
+                img.close()
+                return Image.open(img.filename)
+            except Exception:
+                return None
 
     def _normalize_mode(self, img: Image.Image) -> Image.Image:
         """统一图片模式：RGBA/P → RGB，白底填充"""
