@@ -90,8 +90,8 @@ class PDFProcessor:
         Returns:
             矫正方向后的页面
         """
-        # 获取旋转属性
-        rotation = page.get('/Rotation', 0)
+        # 获取旋转属性（pypdf 使用 /Rotate，兼容 /Rotation）
+        rotation = page.get('/Rotate', page.get('/Rotation', 0))
 
         # 如果有旋转，需要矫正
         if rotation != 0:

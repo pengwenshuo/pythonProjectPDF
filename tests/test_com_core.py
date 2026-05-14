@@ -104,26 +104,291 @@ class TestPrecheckFile:
         assert result is not None
         assert "路径不是文件" in result
 
-    @patch('builtins.open')
-    def test_permission_error(self, mock_open):
+    def test_permission_error(self, tmp_path, monkeypatch):
         """测试权限错误（改为警告）"""
-        mock_open.side_effect = PermissionError("Access denied")
-        # 现在权限错误只是警告，不返回错误
-        result = _precheck_file(Path("test_file.txt"))
-        # 由于我们 mock 了 open，exists() 会返回 True
-        # 但 is_file() 会返回 False（因为 Path 对象是 mock 的）
-        # 所以这里会返回 "路径不是文件" 错误
-        # 这个测试需要更精确的 mock
-        pass
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
 
-    @patch('builtins.open')
-    def test_os_error(self, mock_open):
+        def mock_open(*args, **kwargs):
+            raise PermissionError("Access denied")
+
+        monkeypatch.setattr("builtins.open", mock_open)
+        result = _precheck_file(test_file)
+        # 权限错误应该返回 None（警告，不阻断）
+        assert result is None
+
+    def test_os_error(self, tmp_path, monkeypatch):
         """测试 OS 错误（改为警告）"""
-        mock_open.side_effect = OSError("OS error")
-        # 同样，OS 错误现在只是警告
-        result = _precheck_file(Path("test_file.txt"))
-        # 同样的问题，需要更精确的 mock
-        pass
+        test_file = tmp_path / "test.txt"
+        test_file.touch()
+
+        def mock_open(*args, **kwargs):
+            raise OSError("OS error")
+
+        monkeypatch.setattr("builtins.open", mock_open)
+        result = _precheck_file(test_file)
+        # OS错误应该返回 None（警告，不阻断）
+        assert result is None
+
+
+class TestGetComPid:
+    """_get_com_pid 函数的测试类"""
+
+    def test_get_pid_success(self):
+        """测试成功获取PID"""
+        from pdfgj.com_core import _get_com_pid
+
+        class MockApp:
+            PID = 12345
+
+        result = _get_com_pid(MockApp())
+        assert result == 12345
+
+    def test_get_pid_failure(self):
+        """测试获取PID失败"""
+        from pdfgj.com_core import _get_com_pid
+
+        class MockApp:
+            pass
+
+        result = _get_com_pid(MockApp())
+        assert result is None
+
+
+class TestBatchConvert:
+    """_batch_convert 函数的测试类"""
+
+    def test_batch_convert_no_win32(self, monkeypatch):
+        """测试缺少 pywin32"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', False)
+
+        result = com_core._batch_convert([Path("test.docx")], None, "Word")
+        assert result == ["test.docx"]
+
+    def test_batch_convert_runtime_error(self, monkeypatch):
+        """测试运行时错误"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', True)
+
+        # 模拟一个会抛出 RuntimeError 的转换器
+        class MockConverter:
+            def __enter__(self):
+                raise RuntimeError("测试错误")
+            def __exit__(self, *args):
+                pass
+
+        result = com_core._batch_convert([Path("test.docx")], MockConverter, "Word")
+        assert result == ["test.docx"]
+
+
+class TestComQuit:
+    """_com_quit 函数的测试类"""
+
+    def test_com_quit_none_app(self):
+        """测试 app 为 None"""
+        from pdfgj.com_core import _com_quit
+        _com_quit(None, "Word.Application")
+
+    @patch('pdfgj.com_core.subprocess.run')
+    @patch('pdfgj.com_core.time.sleep')
+    def test_com_quit_normal_exit(self, mock_sleep, mock_run):
+        """测试正常退出"""
+        from pdfgj.com_core import _com_quit
+        mock_app = MagicMock()
+        # tasklist 显示进程已退出
+        mock_run.return_value = MagicMock(stdout="", returncode=0)
+        _com_quit(mock_app, "Word.Application")
+        mock_app.Quit.assert_called_once()
+
+    @patch('pdfgj.com_core.subprocess.run')
+    @patch('pdfgj.com_core.time.sleep')
+    @patch('pdfgj.com_core._get_com_pid', return_value=12345)
+    def test_com_quit_force_kill_by_pid(self, mock_pid, mock_sleep, mock_run):
+        """测试通过 PID 强制终止"""
+        from pdfgj.com_core import _com_quit
+        mock_app = MagicMock()
+        # 第一次 tasklist 显示进程还在，kill 后 tasklist 显示已退出
+        mock_run.side_effect = [
+            MagicMock(stdout="WINWORD.EXE", returncode=0),  # 还在
+            MagicMock(returncode=0),  # taskkill
+            MagicMock(stdout="", returncode=0),  # 已退出
+        ]
+        _com_quit(mock_app, "Word.Application")
+        mock_app.Quit.assert_called_once()
+
+    @patch('pdfgj.com_core.subprocess.run')
+    @patch('pdfgj.com_core.time.sleep')
+    @patch('pdfgj.com_core._get_com_pid', return_value=None)
+    def test_com_quit_no_pid_no_kill_office(self, mock_pid, mock_sleep, mock_run):
+        """测试无 PID 且未授权 kill-office"""
+        from pdfgj.com_core import _com_quit
+        import pdfgj.utils
+        pdfgj.utils._allow_kill_office = False
+
+        mock_app = MagicMock()
+        mock_run.return_value = MagicMock(stdout="WINWORD.EXE", returncode=0)
+        _com_quit(mock_app, "Word.Application")
+        mock_app.Quit.assert_called_once()
+        pdfgj.utils._allow_kill_office = False
+
+    @patch('pdfgj.com_core.subprocess.run')
+    @patch('pdfgj.com_core.time.sleep')
+    @patch('pdfgj.com_core._get_com_pid', return_value=None)
+    def test_com_quit_no_pid_with_kill_office(self, mock_pid, mock_sleep, mock_run):
+        """测试无 PID 且授权 kill-office"""
+        from pdfgj.com_core import _com_quit
+        import pdfgj.utils
+        pdfgj.utils._allow_kill_office = True
+
+        mock_app = MagicMock()
+        # 进程名终止后 tasklist 显示已退出
+        mock_run.side_effect = [
+            MagicMock(stdout="WINWORD.EXE", returncode=0),  # 还在
+            MagicMock(returncode=0),  # taskkill /IM
+            MagicMock(stdout="", returncode=0),  # 已退出
+        ]
+        _com_quit(mock_app, "Word.Application")
+        mock_app.Quit.assert_called_once()
+        pdfgj.utils._allow_kill_office = False
+
+
+class TestComConverter:
+    """COMConverter 基类测试"""
+
+    def test_com_converter_no_win32(self, monkeypatch):
+        """测试缺少 pywin32"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', False)
+        with pytest.raises(RuntimeError, match="缺少 pywin32"):
+            com_core.COMConverter()
+
+    def test_com_converter_app_name_not_implemented(self):
+        """测试 app_name 未实现"""
+        with patch('pdfgj.com_core._has_win32', True), \
+             patch('pdfgj.com_core.pythoncom'), \
+             patch('pdfgj.com_core.DispatchEx'):
+            from pdfgj.com_core import COMConverter
+            converter = COMConverter()
+            with pytest.raises(NotImplementedError):
+                _ = converter.app_name
+
+    def test_com_converter_setup_not_implemented(self):
+        """测试 setup 未实现"""
+        with patch('pdfgj.com_core._has_win32', True), \
+             patch('pdfgj.com_core.pythoncom'), \
+             patch('pdfgj.com_core.DispatchEx'):
+            from pdfgj.com_core import COMConverter
+            converter = COMConverter()
+            with pytest.raises(NotImplementedError):
+                converter.setup(MagicMock())
+
+    def test_com_converter_convert_not_implemented(self):
+        """测试 convert 未实现"""
+        with patch('pdfgj.com_core._has_win32', True), \
+             patch('pdfgj.com_core.pythoncom'), \
+             patch('pdfgj.com_core.DispatchEx'):
+            from pdfgj.com_core import COMConverter
+            converter = COMConverter()
+            with pytest.raises(NotImplementedError):
+                converter.convert(Path("test.docx"))
+
+    def test_com_converter_context_manager(self):
+        """测试上下文管理器"""
+        with patch('pdfgj.com_core._has_win32', True), \
+             patch('pdfgj.com_core.pythoncom') as mock_com, \
+             patch('pdfgj.com_core.DispatchEx') as mock_dispatch:
+            mock_com.CoInitialize.return_value = 0
+            from pdfgj.com_core import COMConverter
+
+            class TestConverter(COMConverter):
+                @property
+                def app_name(self):
+                    return 'Word.Application'
+                def setup(self, app):
+                    pass
+
+            converter = TestConverter()
+            with patch('pdfgj.com_core._com_quit'):
+                with converter as ctx:
+                    assert ctx is converter
+                    mock_dispatch.assert_called_once_with('Word.Application')
+
+
+class TestBatchConvert:
+    """_batch_convert 函数的测试类"""
+
+    def test_batch_convert_no_win32(self, monkeypatch):
+        """测试缺少 pywin32"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', False)
+
+        result = com_core._batch_convert([Path("test.docx")], None, "Word")
+        assert result == ["test.docx"]
+
+    def test_batch_convert_runtime_error(self, monkeypatch):
+        """测试运行时错误"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', True)
+
+        class MockConverter:
+            def __enter__(self):
+                raise RuntimeError("测试错误")
+            def __exit__(self, *args):
+                pass
+
+        result = com_core._batch_convert([Path("test.docx")], MockConverter, "Word")
+        assert result == ["test.docx"]
+
+    def test_batch_convert_success(self, monkeypatch):
+        """测试成功转换"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', True)
+
+        class MockConverter:
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def convert(self, path):
+                return True
+
+        with patch('pdfgj.com_core.utils._progress_bar'):
+            result = com_core._batch_convert([Path("test.docx")], MockConverter, "Word")
+            assert result == []
+
+    def test_batch_convert_partial_failure(self, monkeypatch):
+        """测试部分失败"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', True)
+
+        class MockConverter:
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def convert(self, path):
+                return path.name != "fail.docx"
+
+        with patch('pdfgj.com_core.utils._progress_bar'):
+            files = [Path("ok.docx"), Path("fail.docx")]
+            result = com_core._batch_convert(files, MockConverter, "Word")
+            assert result == ["fail.docx"]
+
+    def test_batch_convert_com_error(self, monkeypatch):
+        """测试 COM 错误"""
+        from pdfgj import com_core
+        monkeypatch.setattr(com_core, '_has_win32', True)
+
+        class MockConverter:
+            def __enter__(self):
+                raise Exception("Error 0x800a03ec")
+            def __exit__(self, *args):
+                pass
+
+        with patch('pdfgj.com_core._is_com_error', return_value=True):
+            result = com_core._batch_convert([Path("test.docx")], MockConverter, "Word")
+            assert result == ["test.docx"]
 
 
 if __name__ == "__main__":

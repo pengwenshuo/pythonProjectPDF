@@ -2,12 +2,13 @@
 
 import pytest
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
 # 添加项目根目录到 Python 路径
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from pdfgj.utils import parse_slide_range, natural_sort_key
+from pdfgj.utils import parse_slide_range, natural_sort_key, _get_files, _check_overwrite, set_force_overwrite, _progress_bar
 
 
 class TestParseSlideRange:
@@ -137,6 +138,171 @@ class TestNaturalSortKey:
         paths = [Path("banana.txt"), Path("apple.txt"), Path("cherry.txt")]
         sorted_paths = sorted(paths, key=natural_sort_key)
         assert sorted_paths == [Path("apple.txt"), Path("banana.txt"), Path("cherry.txt")]
+
+
+class TestGetFiles:
+    """_get_files 函数的测试类"""
+
+    def test_get_files_basic(self, tmp_path):
+        """测试基本文件获取"""
+        # 创建测试文件
+        (tmp_path / "file1.jpg").touch()
+        (tmp_path / "file2.png").touch()
+        (tmp_path / "file3.txt").touch()  # 不支持的格式
+
+        result = _get_files(tmp_path, {'.jpg', '.png'})
+        assert len(result) == 2
+        assert any(f.name == "file1.jpg" for f in result)
+        assert any(f.name == "file2.png" for f in result)
+
+    def test_get_files_recursive(self, tmp_path):
+        """测试递归获取文件"""
+        # 创建子目录和文件
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        (tmp_path / "file1.jpg").touch()
+        (subdir / "file2.jpg").touch()
+
+        result = _get_files(tmp_path, {'.jpg'}, recursive=True)
+        assert len(result) == 2
+
+    def test_get_files_no_recursive(self, tmp_path):
+        """测试不递归获取文件"""
+        # 创建子目录和文件
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        (tmp_path / "file1.jpg").touch()
+        (subdir / "file2.jpg").touch()
+
+        result = _get_files(tmp_path, {'.jpg'}, recursive=False)
+        assert len(result) == 1
+        assert result[0].name == "file1.jpg"
+
+    def test_get_files_empty_directory(self, tmp_path):
+        """测试空目录"""
+        result = _get_files(tmp_path, {'.jpg'})
+        assert len(result) == 0
+
+    def test_get_files_sorted(self, tmp_path):
+        """测试文件排序"""
+        (tmp_path / "file10.jpg").touch()
+        (tmp_path / "file2.jpg").touch()
+        (tmp_path / "file1.jpg").touch()
+
+        result = _get_files(tmp_path, {'.jpg'})
+        assert result[0].name == "file1.jpg"
+        assert result[1].name == "file2.jpg"
+        assert result[2].name == "file10.jpg"
+
+
+class TestCheckOverwrite:
+    """_check_overwrite 函数的测试类"""
+
+    def test_file_not_exists(self, tmp_path):
+        """测试文件不存在"""
+        pdf_path = tmp_path / "nonexistent.pdf"
+        result = _check_overwrite(pdf_path)
+        assert result is True
+
+    def test_file_exists_force_overwrite(self, tmp_path):
+        """测试强制覆盖"""
+        pdf_path = tmp_path / "existing.pdf"
+        pdf_path.touch()
+
+        set_force_overwrite(True)
+        result = _check_overwrite(pdf_path)
+        set_force_overwrite(False)
+        assert result is True
+
+    def test_file_exists_no_force(self, tmp_path):
+        """测试文件存在但不强制覆盖"""
+        pdf_path = tmp_path / "existing.pdf"
+        pdf_path.touch()
+
+        # 非交互模式，应该返回 False
+        result = _check_overwrite(pdf_path, interactive=False)
+        assert result is False
+
+    def test_file_exists_interactive_yes(self, tmp_path):
+        """测试交互模式用户确认覆盖"""
+        pdf_path = tmp_path / "existing.pdf"
+        pdf_path.touch()
+
+        with patch('builtins.input', return_value='y'):
+            result = _check_overwrite(pdf_path, interactive=True)
+            assert result is True
+
+    def test_file_exists_interactive_no(self, tmp_path):
+        """测试交互模式用户拒绝覆盖"""
+        pdf_path = tmp_path / "existing.pdf"
+        pdf_path.touch()
+
+        with patch('builtins.input', return_value='n'):
+            result = _check_overwrite(pdf_path, interactive=True)
+            assert result is False
+
+
+class TestSetForceOverwrite:
+    """set_force_overwrite 函数的测试类"""
+
+    def test_set_true(self):
+        """测试设置为 True"""
+        set_force_overwrite(True)
+        import pdfgj.utils
+        assert pdfgj.utils._force_overwrite is True
+        set_force_overwrite(False)
+
+    def test_set_false(self):
+        """测试设置为 False"""
+        set_force_overwrite(False)
+        import pdfgj.utils
+        assert pdfgj.utils._force_overwrite is False
+
+
+class TestProgressBar:
+    """_progress_bar 函数的测试类"""
+
+    def test_progress_bar_zero_total(self, capsys):
+        """测试总数为0"""
+        _progress_bar(0, 0, 0)
+        captured = capsys.readouterr()
+        # 总数为0时不应该输出任何内容
+        assert captured.out == ""
+
+    def test_progress_bar_complete(self, capsys):
+        """测试完成状态"""
+        import time
+        _progress_bar(10, 10, time.time() - 10)
+        captured = capsys.readouterr()
+        # 完成时应该输出换行
+        assert "\n" in captured.out
+
+    def test_progress_bar_middle(self, capsys):
+        """测试中间状态（非交互式环境不输出）"""
+        import time
+        _progress_bar(5, 10, time.time() - 5)
+        captured = capsys.readouterr()
+        # 非交互式环境下，中间状态不输出（只在完成时输出）
+        assert captured.out == ""
+
+
+class TestSetAllowKillOffice:
+    """set_allow_kill_office 函数的测试类"""
+
+    def test_set_true(self):
+        """测试设置为 True"""
+        from pdfgj.utils import set_allow_kill_office
+        set_allow_kill_office(True)
+        import pdfgj.utils
+        assert pdfgj.utils._allow_kill_office is True
+        set_allow_kill_office(False)
+
+    def test_set_false(self):
+        """测试设置为 False"""
+        from pdfgj.utils import set_allow_kill_office
+        set_allow_kill_office(False)
+        import pdfgj.utils
+        assert pdfgj.utils._allow_kill_office is False
 
 
 if __name__ == "__main__":

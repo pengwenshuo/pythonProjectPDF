@@ -16,6 +16,8 @@
 
 - Windows 7+（Word/Excel/PPT 转换需要安装对应的 Office 组件）
 - Python 3.9+
+- pypdf（PDF 处理库）
+- Pillow（图片处理库）
 
 ## 安装
 
@@ -124,19 +126,43 @@ merge_pdfs(".")
 │   ├── constants.py          # 文件格式常量与 COM 常量
 │   ├── deps.py               # 依赖检测
 │   └── utils.py              # 工具函数（排序/进度条/覆盖保护）
-└── tests/                    # 单元测试
+└── tests/                    # 单元测试（覆盖率 86%）
     ├── test_utils.py         # utils 模块测试
     ├── test_com_core.py      # com_core 模块测试
     ├── test_pdf_processor.py # pdf_processor 模块测试
-    └── test_image_processor.py # image_processor 模块测试
+    ├── test_image_processor.py # image_processor 模块测试
+    ├── test_image_convert.py # image_convert 模块测试
+    ├── test_merge.py         # merge 模块测试
+    ├── test_cli.py           # cli 模块测试
+    ├── test_deps.py          # deps 模块测试
+    ├── test_word_convert.py  # word_convert 模块测试
+    ├── test_excel_convert.py # excel_convert 模块测试
+    └── test_ppt_convert.py   # ppt_convert 模块测试
 ```
 
 ## 开发
 
+### 依赖
+
+```bash
+# 安装开发依赖
+pip install pypdf Pillow pytest pytest-cov
+
+# Windows 平台（Word/Excel/PPT 转换需要）
+pip install pywin32
+```
+
 ### 运行测试
 
 ```bash
+# 运行所有测试
 pytest tests/ -v
+
+# 运行测试并查看覆盖率
+pytest tests/ -v --cov=pdfgj --cov-report=term-missing
+
+# 运行特定模块测试
+pytest tests/test_image_processor.py -v
 ```
 
 ### 语法检查

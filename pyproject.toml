@@ -10,9 +10,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "pillow>=12.0",
-    "PyPDF2>=3.0",
+    "pypdf>=6.0",
     "pywin32>=300; sys_platform == 'win32'",
-    "pytest>=7.0",
 ]
 
 [project.scripts]

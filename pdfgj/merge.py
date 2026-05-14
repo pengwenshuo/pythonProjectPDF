@@ -4,7 +4,7 @@ import os
 import time
 from pathlib import Path
 
-from .deps import _has_pypdf, PdfMerger, PdfReader, PdfWriter
+from .deps import _has_pypdf, PdfReader, PdfWriter
 from .utils import _get_files, natural_sort_key, _check_overwrite, _progress_bar
 from .pdf_processor import PDFProcessor
 
@@ -21,7 +21,6 @@ def merge_pdfs(directory: Path, output_name: str = "merged.pdf", recursive: bool
     if not _has_pypdf:
         print("缺少 pypdf 库，无法合并 PDF。请运行: pip install pypdf")
         return False
-    assert PdfMerger is not None  # 静态分析护栏：_has_pypdf 为 True 时 PdfMerger 必定已导入
     pdf_files = _get_all_pdfs(directory, recursive, exclude={output_name})
     if sortby == 'ctime':
         pdf_files.sort(key=lambda f: f.stat().st_ctime)

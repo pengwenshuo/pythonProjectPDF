@@ -1,36 +1,19 @@
 """pypdf / win32com 依赖检测"""
 
 # ============================================================
-# pypdf 三层回退导入（pypdf → PyPDF2 >=2.0 → PyPDF2 <2.0）
+# pypdf 导入
 # ============================================================
 try:
-    from pypdf import PdfMerger, PdfReader, PdfWriter, PageObject, Transformation  # noqa: F811
+    from pypdf import PdfReader, PdfWriter, PageObject, Transformation  # noqa: F811
     _has_pypdf: bool = True
     _pypdf_source: str = 'pypdf'
 except ImportError:
-    try:
-        from PyPDF2 import PdfMerger, PdfReader, PdfWriter  # type: ignore[no-redef]
-        from PyPDF2 import PageObject, Transformation  # type: ignore[no-redef]
-        _has_pypdf = True
-        _pypdf_source = 'PyPDF2 (>=2.0)'
-        print("  [提示] 检测到 PyPDF2，建议升级到 pypdf: pip install pypdf")
-    except ImportError:
-        try:
-            from PyPDF2 import PdfMerger, PdfFileReader as PdfReader, PdfFileWriter as PdfWriter  # type: ignore[no-redef]
-            # 旧版 PyPDF2 可能没有 PageObject 和 Transformation
-            PageObject = None  # type: ignore[assignment,misc]
-            Transformation = None  # type: ignore[assignment,misc]
-            _has_pypdf = True
-            _pypdf_source = 'PyPDF2 (<2.0，旧版)'
-            print("  [提示] 检测到旧版 PyPDF2，建议升级: pip install pypdf")
-        except ImportError:
-            _has_pypdf = False
-            _pypdf_source = ''
-            PdfMerger = None  # type: ignore[assignment]
-            PdfReader = None  # type: ignore[assignment]
-            PdfWriter = None  # type: ignore[assignment]
-            PageObject = None  # type: ignore[assignment,misc]
-            Transformation = None  # type: ignore[assignment,misc]
+    _has_pypdf = False
+    _pypdf_source = ''
+    PdfReader = None  # type: ignore[assignment]
+    PdfWriter = None  # type: ignore[assignment]
+    PageObject = None  # type: ignore[assignment,misc]
+    Transformation = None  # type: ignore[assignment,misc]
 
 # ============================================================
 # win32com 检测
