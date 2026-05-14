@@ -27,16 +27,22 @@
 | 自动矫正页面方向 | 确保文字方向正确，不出现倒置 |
 | 逐文件处理 | 控制内存占用，防止程序卡顿 |
 | 交互式确认覆盖 | 防止误覆盖已有文件 |
+| 创建独立的 image_processor.py 模块 | 职责分离，代码清晰，可维护性好 |
+| 使用 ImageOps.exif_transpose() 处理EXIF | Pillow 内置方法，简洁可靠 |
+| GIF 只取第一帧 | 避免生成巨大PDF文件 |
+| 逐张处理，处理完释放 | 控制内存占用 |
 
 ## 遇到的问题
 | 问题 | 解决方案 |
 |------|---------|
-|      |         |
+| 无 | - |
 
 ## 资源
 - 设计文档：docs/superpowers/specs/2026-05-14-pdf-merge-improvement-design.md
+- 设计文档：docs/superpowers/specs/2026-05-14-image-convert-improvement-design.md
 - PyPDF2 文档：https://pypdf2.readthedocs.io/
 - pypdf 文档：https://pypdf.readthedocs.io/
+- Pillow 文档：https://pillow.readthedocs.io/
 
 ## 视觉/浏览器发现
 <!-- 关键：每执行2次查看/浏览器操作后更新此部分 -->

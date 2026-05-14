@@ -4,7 +4,7 @@
 
 ## 功能特性
 
-- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等格式，自动处理透明背景，支持灰度模式，自动矫正 EXIF 方向，GIF 只取第一帧
+- **图片转 PDF** — 支持 JPG、PNG、WebP、BMP、GIF、TIFF 等格式，自动处理透明背景，自动矫正 EXIF 方向，GIF 只取第一帧
 - **Word 转 PDF** — 通过 COM 自动化批量转换 .docx/.doc，仅启动一次 Word
 - **Excel 转 PDF** — 通过 COM 自动化批量转换 .xlsx/.xls/.xlsm，自动重算公式
 - **PPT 转 PDF** — 通过 COM 自动化批量转换 .pptx/.ppt，支持指定页码范围导出
@@ -37,10 +37,9 @@ pip install -e .
 ### 命令行使用
 
 ```bash
-# 图片转 PDF（默认模式）
-pdfgj                    # 当前目录所有图片
-pdfgj -g                 # 灰度模式
-pdfgj -r                 # 递归子目录
+# 图片转 PDF
+pdfgj -i                 # 当前目录所有图片
+pdfgj -ir                # 递归子目录
 
 # Word 转 PDF
 pdfgj -w                 # 当前目录所有 Word 文档
@@ -55,17 +54,19 @@ pdfgj -p                 # 当前目录所有 PPT
 pdfgj -pr                # 递归子目录
 pdfgj -p --slides 1,3,5-8  # 指定页码范围
 
-# PDF 合并
-pdfgj -m                 # 合并为 merged.pdf
-pdfgj -m -o output.pdf   # 指定输出文件名
-pdfgj -m --sortby mtime  # 按修改时间排序
+# PDF 合并（默认模式）
+pdfgj                    # 合并为 merged.pdf
+pdfgj -o output.pdf      # 指定输出文件名
+pdfgj --sortby mtime     # 按修改时间排序
+pdfgj -r                 # 递归子目录
 ```
 
 ### Python 模块调用
 
 ```bash
 python -m pdfgj -w       # Word → PDF
-python -m pdfgj -m       # 合并 PDF
+python -m pdfgj -i       # 图片 → PDF
+python -m pdfgj          # 合并 PDF（默认）
 ```
 
 ### 作为库使用
@@ -84,8 +85,8 @@ merge_pdfs(".")
 
 | 参数 | 说明 |
 |------|------|
-| `-m`, `--merge` | 合并模式：合并目录下所有 PDF |
-| `-g`, `--gray` | 灰度模式：图片转灰度 PDF |
+| `-m`, `--merge` | 合并模式：合并目录下所有 PDF（默认） |
+| `-i`, `--image` | 图片模式：图片转 PDF |
 | `-w`, `--word` | Word 模式：Word 文档转 PDF |
 | `-e`, `--excel` | Excel 模式：Excel 表格转 PDF |
 | `-p`, `--ppt` | PPT 模式：PowerPoint 演示文稿转 PDF |
@@ -109,7 +110,7 @@ merge_pdfs(".")
 
 ```
 ├── pyproject.toml            # 打包配置与依赖声明
-├── runPDF.bat                # 快捷运行脚本
+├── PDF.bat                   # 快捷运行脚本
 ├── pdfgj/                    # 核心模块包
 │   ├── cli.py                # 命令行参数解析与主流程
 │   ├── image_convert.py      # 图片转 PDF

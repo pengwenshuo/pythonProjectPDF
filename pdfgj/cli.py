@@ -21,21 +21,20 @@ def parse_args() -> argparse.Namespace:
         description='图片 / Word / Excel 转 PDF 与 PDF 合并工具',
         epilog='''
 快捷方式（任意终端直接输入）:
-  runPDF                       合并PDF(默认)
-  runPDF -i                    图片→PDF
-  runPDF -w                   Word→PDF
-  runPDF -e                   Excel→PDF
-  runPDF -p                   PPT→PDF
-  runPDF -ro 合集.pdf         合并+递归+指定输出
+  PDF                          合并PDF(默认)
+  PDF -i                       图片→PDF
+  PDF -w                       Word→PDF
+  PDF -e                       Excel→PDF
+  PDF -p                       PPT→PDF
+  PDF -ro 合集.pdf             合并+递归+指定输出
 
 完整命令:
-  python PDFgj.py              合并PDF(默认)       python PDFgj.py -i          图片→PDF
-  python PDFgj.py -ir          图片→PDF(递归)      python PDFgj.py -w          Word→PDF
-  python PDFgj.py -wr          Word→PDF(递归)      python PDFgj.py -e          Excel→PDF
-  python PDFgj.py -er          Excel→PDF(递归)     python PDFgj.py -p          PPT→PDF
-  python PDFgj.py -pr          PPT→PDF(递归)       python PDFgj.py -p --slides 1,3,5-8  PPT→PDF(指定页码)
-  python PDFgj.py -ro out      合并+递归+指定输出
-  python -m pdfgj              合并PDF(新入口)     python -m pdfgj -i          图片→PDF(新入口)
+  python -m pdfgj              合并PDF(默认)       python -m pdfgj -i          图片→PDF
+  python -m pdfgj -ir          图片→PDF(递归)      python -m pdfgj -w          Word→PDF
+  python -m pdfgj -wr          Word→PDF(递归)      python -m pdfgj -e          Excel→PDF
+  python -m pdfgj -er          Excel→PDF(递归)     python -m pdfgj -p          PPT→PDF
+  python -m pdfgj -pr          PPT→PDF(递归)       python -m pdfgj -p --slides 1,3,5-8  PPT→PDF(指定页码)
+  python -m pdfgj -ro out      合并+递归+指定输出
         ''',
         formatter_class=argparse.RawTextHelpFormatter
     )
