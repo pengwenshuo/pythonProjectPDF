@@ -21,28 +21,28 @@ def parse_args() -> argparse.Namespace:
         description='图片 / Word / Excel 转 PDF 与 PDF 合并工具',
         epilog='''
 快捷方式（任意终端直接输入）:
+  runPDF                       合并PDF(默认)
+  runPDF -i                    图片→PDF
   runPDF -w                   Word→PDF
   runPDF -e                   Excel→PDF
   runPDF -p                   PPT→PDF
-  runPDF -m                   合并PDF
-  runPDF -gr                  图片→PDF(灰度+递归)
-  runPDF -mro 合集.pdf         合并+递归+指定输出
+  runPDF -ro 合集.pdf         合并+递归+指定输出
 
 完整命令:
-  python PDFgj.py              图片→PDF(彩色)      python PDFgj.py -gr        图片→PDF(灰度+递归)
-  python PDFgj.py -w            Word→PDF            python PDFgj.py -wr        Word→PDF(递归)
-  python PDFgj.py -e            Excel→PDF            python PDFgj.py -er        Excel→PDF(递归)
-  python PDFgj.py -p            PPT→PDF              python PDFgj.py -pr        PPT→PDF(递归)
-  python PDFgj.py -p --slides 1,3,5-8  PPT→PDF(指定页码)
-  python PDFgj.py -m           合并PDF              python PDFgj.py -mro out  合并+递归+指定输出
-  python -m pdfgj -w            Word→PDF(新入口)     python -m pdfgj -m        合并PDF(新入口)
+  python PDFgj.py              合并PDF(默认)       python PDFgj.py -i          图片→PDF
+  python PDFgj.py -ir          图片→PDF(递归)      python PDFgj.py -w          Word→PDF
+  python PDFgj.py -wr          Word→PDF(递归)      python PDFgj.py -e          Excel→PDF
+  python PDFgj.py -er          Excel→PDF(递归)     python PDFgj.py -p          PPT→PDF
+  python PDFgj.py -pr          PPT→PDF(递归)       python PDFgj.py -p --slides 1,3,5-8  PPT→PDF(指定页码)
+  python PDFgj.py -ro out      合并+递归+指定输出
+  python -m pdfgj              合并PDF(新入口)     python -m pdfgj -i          图片→PDF(新入口)
         ''',
         formatter_class=argparse.RawTextHelpFormatter
     )
     # 工作模式
     mode = p.add_mutually_exclusive_group()
     mode.add_argument('-m', '--merge', action='store_true', help='合并模式：合并目录下所有 PDF')
-    mode.add_argument('-g', '--gray', action='store_true', help='灰度模式：图片转灰度 PDF')
+    mode.add_argument('-i', '--image', action='store_true', help='图片模式：图片转 PDF')
     mode.add_argument('-w', '--word', action='store_true', help='Word 模式：Word 文档转 PDF')
     mode.add_argument('-e', '--excel', action='store_true', help='Excel 模式：Excel 表格转 PDF')
     mode.add_argument('-p', '--ppt', action='store_true', help='PPT 模式：PowerPoint 演示文稿转 PDF')
@@ -65,8 +65,10 @@ def parse_args() -> argparse.Namespace:
 
     has_output = _argv_has(('-o', '--output'))
     has_sortby = _argv_has('--sortby')
-    if (has_output or has_sortby) and not args.merge:
-        p.error('-o / --sortby 只能在合并模式 (-m) 下使用')
+    # 默认模式和 -m 都是合并，都允许使用 -o / --sortby
+    is_merge = args.merge or (not args.image and not args.word and not args.excel and not args.ppt)
+    if (has_output or has_sortby) and not is_merge:
+        p.error('-o / --sortby 只能在合并模式下使用')
 
     has_slides = _argv_has('--slides')
     if has_slides and not args.ppt:
@@ -91,11 +93,6 @@ def main():
     set_allow_kill_office(args.kill_office)
     cwd = Path.cwd()
     print(f"工作目录: {cwd}\n")
-
-    # --- 合并 PDF ---
-    if args.merge:
-        merge_pdfs(cwd, output_name=args.output, recursive=args.recursive, sortby=args.sortby)
-        return
 
     # --- Word 转 PDF（批量：仅启停一次 Word） ---
     if args.word:
@@ -130,18 +127,23 @@ def main():
         _print_summary(len(files), failed)
         return
 
-    # --- 图片转 PDF（默认模式，支持递归）---
-    images = _get_files(cwd, IMG_FORMATS, recursive=args.recursive)
-    if not images:
-        print("当前目录未找到图片文件")
-        print(f"支持格式: {', '.join(sorted(IMG_FORMATS))}")
+    # --- 图片转 PDF（-i 模式）---
+    if args.image:
+        images = _get_files(cwd, IMG_FORMATS, recursive=args.recursive)
+        if not images:
+            print("当前目录未找到图片文件")
+            print(f"支持格式: {', '.join(sorted(IMG_FORMATS))}")
+            return
+        print(f"找到 {len(images)} 张图片\n")
+        total = len(images)
+        t0 = time.time()
+        failed: list[str] = []
+        for i, img in enumerate(images, 1):
+            if not image_to_pdf(img):
+                failed.append(img.name)
+            _progress_bar(i, total, t0, "图片→PDF")
+        _print_summary(len(images), failed)
         return
-    print(f"找到 {len(images)} 张图片\n")
-    total = len(images)
-    t0 = time.time()
-    failed: list[str] = []
-    for i, img in enumerate(images, 1):
-        if not image_to_pdf(img, grayscale=args.gray):
-            failed.append(img.name)
-        _progress_bar(i, total, t0, "图片→PDF")
-    _print_summary(len(images), failed)
+
+    # --- 合并 PDF（默认模式，包括 -m 显式指定）---
+    merge_pdfs(cwd, output_name=args.output, recursive=args.recursive, sortby=args.sortby)

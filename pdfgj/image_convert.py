@@ -6,7 +6,7 @@ from PIL import Image
 from .utils import _check_overwrite
 
 
-def image_to_pdf(image_path: Path, grayscale: bool = False) -> bool:
+def image_to_pdf(image_path: Path) -> bool:
     """单张图片转 PDF，自动将透明背景转为白底"""
     pdf_path = image_path.with_suffix('.pdf')
     if not _check_overwrite(pdf_path):
@@ -22,8 +22,6 @@ def image_to_pdf(image_path: Path, grayscale: bool = False) -> bool:
             img = bg
         elif img.mode != 'RGB':
             img = img.convert('RGB')
-        if grayscale:
-            img = img.convert('L')
         img.save(pdf_path, format="PDF", save_all=True, resolution=200.0)
         print(f"  [OK] {image_path.name} → {pdf_path.name}")
         return True
