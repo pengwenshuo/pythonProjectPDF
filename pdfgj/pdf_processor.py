@@ -1,7 +1,7 @@
 """PDF处理器：文件验证、页面标准化、方向矫正"""
 
 from pathlib import Path
-from .deps import _has_pypdf, PdfReader, PdfWriter
+from .deps import _has_pypdf, PdfReader
 
 
 class PDFProcessor:
