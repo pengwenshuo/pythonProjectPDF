@@ -133,10 +133,6 @@ merge_pdfs(".")
 ### 运行测试
 
 ```bash
-# 安装测试依赖
-pip install -e ".[test]"
-
-# 运行测试
 pytest tests/ -v
 ```
 
