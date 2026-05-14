@@ -5,6 +5,7 @@ __pycache__/
 .env
 .idea/
 .vscode/
+.claude/
 dist/
 build/
 *.egg-info/
