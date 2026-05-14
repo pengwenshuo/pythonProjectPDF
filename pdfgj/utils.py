@@ -106,22 +106,12 @@ def _progress_bar(current: int, total: int, start_time: float, label: str = "") 
             print(f"  {prefix}完成 {current}/{total}，耗时 {elapsed_str}")
         return
 
-    # 交互式环境：显示完整进度条
-    pct = current / total
-    bar_len = 30
-    filled = int(bar_len * pct)
-    bar = '█' * filled + '░' * (bar_len - filled)
-    elapsed = time.time() - start_time
-    if current > 0:
-        eta = elapsed / current * (total - current)
-        eta_str = f"剩余 {eta:.0f}s" if eta < 120 else f"剩余 {eta/60:.1f}min"
-    else:
-        eta_str = "计算中…"
-    elapsed_str = f"{elapsed:.0f}s" if elapsed < 120 else f"{elapsed/60:.1f}min"
-    prefix = f"{label}: " if label else ""
-    print(f"\r  {prefix}[{bar}] {current}/{total} ({pct*100:.1f}%)  已用 {elapsed_str}  {eta_str}  ", end='', flush=True)
+    # 交互式环境：仅在完成时显示进度条汇总
     if current >= total:
-        print()  # 完成时换行
+        elapsed = time.time() - start_time
+        elapsed_str = f"{elapsed:.0f}s" if elapsed < 120 else f"{elapsed/60:.1f}min"
+        prefix = f"{label}: " if label else ""
+        print(f"  {prefix}完成 {current}/{total}，耗时 {elapsed_str}")
 
 
 # ============================================================
