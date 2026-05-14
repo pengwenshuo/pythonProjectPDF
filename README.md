@@ -8,7 +8,7 @@
 - **Word 转 PDF** — 通过 COM 自动化批量转换 .docx/.doc，仅启动一次 Word
 - **Excel 转 PDF** — 通过 COM 自动化批量转换 .xlsx/.xls/.xlsm，自动重算公式
 - **PPT 转 PDF** — 通过 COM 自动化批量转换 .pptx/.ppt，支持指定页码范围导出
-- **PDF 合并** — 流式合并目录下多个 PDF，支持按名称/时间排序
+- **PDF 合并** — 流式合并目录下多个 PDF，支持按名称/时间排序，自动验证文件有效性，统一 A4 画布尺寸，自动矫正页面方向
 - **递归扫描** — 所有模式均支持递归处理子目录
 - **覆盖保护** — 同名文件存在时提示确认，支持 `-y` 跳过确认
 
@@ -117,13 +117,15 @@ merge_pdfs(".")
 │   ├── excel_convert.py      # Excel 转 PDF（COM）
 │   ├── ppt_convert.py        # PPT 转 PDF（COM）
 │   ├── merge.py              # PDF 合并
+│   ├── pdf_processor.py      # PDF 处理器（文件验证/页面标准化/方向矫正）
 │   ├── com_core.py           # COM 公共层（进程管理/错误分类）
 │   ├── constants.py          # 文件格式常量与 COM 常量
 │   ├── deps.py               # 依赖检测
 │   └── utils.py              # 工具函数（排序/进度条/覆盖保护）
 └── tests/                    # 单元测试
     ├── test_utils.py         # utils 模块测试
-    └── test_com_core.py      # com_core 模块测试
+    ├── test_com_core.py      # com_core 模块测试
+    └── test_pdf_processor.py # pdf_processor 模块测试
 ```
 
 ## 开发
