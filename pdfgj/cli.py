@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+__version__ = "1.0.0"
+
 from .constants import IMG_FORMATS, WORD_FORMATS, EXCEL_FORMATS, PPT_FORMATS
 from .utils import _get_files, _progress_bar, set_force_overwrite, set_allow_kill_office
 from .com_core import _batch_convert
@@ -38,6 +40,7 @@ def parse_args() -> argparse.Namespace:
         ''',
         formatter_class=argparse.RawTextHelpFormatter
     )
+    p.add_argument('-v', '--version', action='version', version=f'%(prog)s {__version__}')
     # 工作模式
     mode = p.add_mutually_exclusive_group()
     mode.add_argument('-m', '--merge', action='store_true', help='合并模式：合并目录下所有 PDF')
