@@ -1,5 +1,9 @@
 # PDFgj
 
+[![Python 3.9+](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Platform: Windows](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
+
 一款 Windows 平台的 Python 命令行工具，用于图片/Word/Excel/PPT 转 PDF 以及 PDF 合并。
 
 ## 功能特性
@@ -16,8 +20,7 @@
 
 - Windows 7+（Word/Excel/PPT 转换需要安装对应的 Office 组件）
 - Python 3.9+
-- pypdf（PDF 处理库）
-- Pillow（图片处理库）
+- 依赖：pypdf、Pillow、pywin32（仅 Windows）
 
 ## 安装
 
@@ -74,13 +77,34 @@ python -m pdfgj          # 合并 PDF（默认）
 ### 作为库使用
 
 ```python
-from pdfgj import image_to_pdf, merge_pdfs
+from pdfgj import (
+    image_to_pdf,
+    word_to_pdf, WordConverter,
+    excel_to_pdf, ExcelConverter,
+    ppt_to_pdf, PptConverter,
+    merge_pdfs,
+)
 
 # 单张图片转 PDF
 image_to_pdf("photo.jpg")
 
+# Word 转 PDF
+word_to_pdf("document.docx")
+
+# Excel 转 PDF
+excel_to_pdf("spreadsheet.xlsx")
+
+# PPT 转 PDF（支持指定页码）
+ppt_to_pdf("slides.pptx", slides=[1, 3, 5, 6, 7, 8])
+
+# 批量转换（使用上下文管理器，只启动一次 Office）
+with WordConverter() as converter:
+    for doc in ["doc1.docx", "doc2.doc", "doc3.docx"]:
+        converter.convert(doc)
+
 # 合并目录下所有 PDF
 merge_pdfs(".")
+merge_pdfs("docs/", output="combined.pdf", sortby="name")
 ```
 
 ## 命令行参数
@@ -112,32 +136,47 @@ merge_pdfs(".")
 
 ```
 ├── pyproject.toml            # 打包配置与依赖声明
-├── PDF.bat                   # 快捷运行脚本
+├── CLAUDE.md                 # Claude Code 开发指南
+├── README.md                 # 项目说明文档
+├── PDF.bat                   # Windows 快捷运行脚本
+├── .gitignore                # Git 忽略规则
+│
 ├── pdfgj/                    # 核心模块包
+│   ├── __init__.py           # 公开 API 导出
+│   ├── __main__.py           # python -m pdfgj 入口
 │   ├── cli.py                # 命令行参数解析与主流程
+│   ├── constants.py          # 文件格式常量与 COM 常量
+│   ├── deps.py               # 依赖检测（pypdf/PyPDF2 三级回退）
+│   ├── utils.py              # 工具函数（排序/进度条/覆盖保护）
+│   ├── com_core.py           # COM 公共层（进程管理/错误分类/批量编排）
 │   ├── image_convert.py      # 图片转 PDF
 │   ├── image_processor.py    # 图片预处理器（验证/EXIF矫正/GIF处理）
-│   ├── word_convert.py       # Word 转 PDF（COM）
-│   ├── excel_convert.py      # Excel 转 PDF（COM）
-│   ├── ppt_convert.py        # PPT 转 PDF（COM）
-│   ├── merge.py              # PDF 合并
-│   ├── pdf_processor.py      # PDF 处理器（文件验证/页面标准化/方向矫正）
-│   ├── com_core.py           # COM 公共层（进程管理/错误分类）
-│   ├── constants.py          # 文件格式常量与 COM 常量
-│   ├── deps.py               # 依赖检测
-│   └── utils.py              # 工具函数（排序/进度条/覆盖保护）
-└── tests/                    # 单元测试（覆盖率 86%）
-    ├── test_utils.py         # utils 模块测试
-    ├── test_com_core.py      # com_core 模块测试
-    ├── test_pdf_processor.py # pdf_processor 模块测试
-    ├── test_image_processor.py # image_processor 模块测试
-    ├── test_image_convert.py # image_convert 模块测试
-    ├── test_merge.py         # merge 模块测试
-    ├── test_cli.py           # cli 模块测试
-    ├── test_deps.py          # deps 模块测试
-    ├── test_word_convert.py  # word_convert 模块测试
-    ├── test_excel_convert.py # excel_convert 模块测试
-    └── test_ppt_convert.py   # ppt_convert 模块测试
+│   ├── word_convert.py       # Word 转 PDF（COM 自动化）
+│   ├── excel_convert.py      # Excel 转 PDF（COM 自动化）
+│   ├── ppt_convert.py        # PPT 转 PDF（COM 自动化）
+│   ├── merge.py              # PDF 合并（pypdf 流式合并）
+│   └── pdf_processor.py      # PDF 处理器（验证/页面标准化/方向矫正）
+│
+├── tests/                    # 单元测试（覆盖率 86%）
+│   ├── conftest.py           # 测试配置与 fixtures
+│   ├── test_cli.py           # cli 模块测试
+│   ├── test_com_core.py      # com_core 模块测试
+│   ├── test_deps.py          # deps 模块测试
+│   ├── test_excel_convert.py # excel_convert 模块测试
+│   ├── test_image_convert.py # image_convert 模块测试
+│   ├── test_image_processor.py # image_processor 模块测试
+│   ├── test_merge.py         # merge 模块测试
+│   ├── test_pdf_processor.py # pdf_processor 模块测试
+│   ├── test_ppt_convert.py   # ppt_convert 模块测试
+│   ├── test_utils.py         # utils 模块测试
+│   └── test_word_convert.py  # word_convert 模块测试
+│
+├── docs/                     # 文档目录
+│   └── superpowers/          # Claude Code 技能配置与设计文档
+│
+├── task_plan.md              # 任务计划文档
+├── progress.md               # 开发进度日志
+└── findings.md               # 技术发现与决策记录
 ```
 
 ## 开发
@@ -163,6 +202,9 @@ pytest tests/ -v --cov=pdfgj --cov-report=term-missing
 
 # 运行特定模块测试
 pytest tests/test_image_processor.py -v
+
+# 跳过慢速测试
+pytest tests/ -m 'not slow'
 ```
 
 ### 语法检查
